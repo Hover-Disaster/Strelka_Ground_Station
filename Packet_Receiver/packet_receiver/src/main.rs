@@ -10,7 +10,7 @@ use std::thread;
 use std::{env, process, time::Duration};
 use std::{error::Error, fmt::format};
 
-use serialport;
+use serialport::{SerialPortType, UsbPortInfo};
 pub mod data_structures;
 pub mod definitions;
 
@@ -50,6 +50,7 @@ impl PacketDecoder {
         };
     }
     fn handle_packet(&mut self, packet: &Vec<u8>) {
+        println!("PAcket: {:#?}", packet);
         // Check header bytes
         let identifier = u16::from_le_bytes([packet[0], packet[1]]);
         self.sender_id = u32::from_le_bytes(packet[2..6].try_into().unwrap());
@@ -288,7 +289,7 @@ impl PacketDecoder {
 fn main() {
     /* USB COM Port Settings */
     let baud_rate = 9600;
-    let com_port = "COM8";
+    let mut com_port = String::from("");
 
     /* MQTT Settings */
     let broker_address = "192.168.0.11";
@@ -298,26 +299,50 @@ fn main() {
         PacketDecoder::new(broker_address.to_owned(), mqtt_port, client_id.to_owned());
 
     let ports = serialport::available_ports().expect("Error: No COM ports available");
-    println!("{:#?}", ports);
+
     // Iterate over the ports and check if any matches the Arduino's characteristics
-    for port in ports {
-        println!("Port names: {}", port.port_name.to_lowercase());
-        // if port.port_name.to_lowercase().contains("usb") && port.port_type.is_usb_serial() {
-        //     return Some(port.port_name);
-        // }
+    for port in &ports {
+        match &port.port_type {
+            SerialPortType::UsbPort(usb_info) => {
+                if usb_info.manufacturer.clone().unwrap().starts_with("Arduino") {
+                    com_port = port.port_name.clone();
+                }
+            }
+            SerialPortType::PciPort => {},
+            SerialPortType::BluetoothPort => {},
+            SerialPortType::Unknown => {},
+        }
     }
 
+    
+
+    println!("Reading from {} port", com_port);   
+
     let mut port = serialport::new(com_port, baud_rate)
-        .timeout(Duration::from_millis(1))
+        .timeout(Duration::from_millis(10))
         .open()
         .expect("Failed to open port");
 
-    // loop {
-    //     let bytes_available = port.bytes_to_read().unwrap();
-    //     if bytes_available > 0 {
-    //         let mut serial_buf: Vec<u8> = vec![0; bytes_available as usize];
-    //         let bytes_read = port.read(&mut serial_buf).unwrap();
-    //         decoder.handle_packet(&serial_buff.to_vec());
-    //     }
-    // }
+    loop {
+        let mut serial_buffer: Vec<u8> = Vec::new();
+        let mut bytes_available = port.bytes_to_read().unwrap();
+        if bytes_available > 0 {
+            println!("Bytes avaiable: {}", bytes_available);
+            let mut read_buffer: Vec<u8> = vec![0; bytes_available as usize];
+            let bytes_read = port.read_exact(&mut read_buffer).unwrap();
+            println!("Bytes read: {:#?}", bytes_read);
+            println!("Serial buffer: {:#?}", read_buffer);
+            // decoder.handle_packet(&serial_buf.to_vec());
+
+            for byte in read_buffer {
+                // Append until newline character is read
+                if byte != 0x0A {
+                    serial_buffer.push(byte);
+                }
+                else {
+                    break;
+                }
+            }
+        }
+    }
 }
