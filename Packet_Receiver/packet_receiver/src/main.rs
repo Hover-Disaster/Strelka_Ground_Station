@@ -4,13 +4,13 @@ use data_structures::{
     FireDrogueRes, FireMainRes, FlashStateRes, Gps1StateRes, Gps2StateRes, GpsTrackingConfigRes,
     GpsTrackingPacket, Gyro1StateRes, Gyro2StateRes, Mag1StateRes, Mag2StateRes,
 };
-use rumqttc::{Client, MqttOptions, QoS};
 use serde::{Deserialize, Serialize};
-use std::thread;
-use std::{env, process, time::Duration};
-use std::{error::Error, fmt::format};
+use rumqttc::{MqttOptions, AsyncClient, QoS, EventLoop};
+use tokio::{task, time};
+use std::time::Duration;
+use std::error::Error;
 
-use serialport::{SerialPortType, UsbPortInfo};
+use serialport::{SerialPortType, UsbPortInfo, ClearBuffer};
 pub mod data_structures;
 pub mod definitions;
 
@@ -18,10 +18,10 @@ const RECEIVER_HARDWARE_ID: u32 = 0x00;
 // TODO: Change to real ID
 const SENDER_HARDWARE_ID: u32 = 0x00;
 
+const MIN_PACKET_SIZE: usize = 13;
+
 struct PacketDecoder {
     sender_id: u32,
-    mqtt_client: Client,
-    mqtt_connection: rumqttc::Connection,
     broker_address: String,
     client_id: String,
     port: u16,
@@ -34,53 +34,41 @@ impl PacketDecoder {
     - Return meaningful values when erroring out
      */
     fn new(broker_address: String, port: u16, client_id: String) -> Self {
-        let mut mqttoptions = MqttOptions::new(client_id.clone(), broker_address.clone(), port);
-        mqttoptions.set_keep_alive(Duration::from_secs(5));
-        // mqttoptions.set_credentials("kicsensor", "");
-
-        let (mut mqtt_client, mut connection) = Client::new(mqttoptions, 10);
-
         return PacketDecoder {
             sender_id: 0x00,
-            mqtt_client: mqtt_client,
-            mqtt_connection: connection,
             broker_address: broker_address.to_string(),
             port: port,
             client_id: client_id,
         };
     }
-    fn handle_packet(&mut self, packet: &Vec<u8>) {
-        println!("PAcket: {:#?}", packet);
+    fn handle_packet(&mut self, packet: &Vec<u8>) -> Result<(String, String), String> {
+        if packet.len() < MIN_PACKET_SIZE {
+            return Err("Packet incomplete, dropped".to_string());
+        }
         // Check header bytes
         let identifier = u16::from_le_bytes([packet[0], packet[1]]);
         self.sender_id = u32::from_le_bytes(packet[2..6].try_into().unwrap());
         let receiver_id = u32::from_le_bytes(packet[6..10].try_into().unwrap());
         if receiver_id != RECEIVER_HARDWARE_ID {
-            eprintln!("Receiver id does not match receiver hardware id");
-            return;
+            return Err("Receiver id does not match receiver hardware id".to_string());
         }
         // TODO: Check a file containing all valid sender IDs
         else if self.sender_id != SENDER_HARDWARE_ID {
-            eprintln!("Sender id does not match sender hardware id");
-            return;
+            return Err("RSender id does not match sender hardware id".to_string());
         }
         if let Some(payload_length) = self.get_payload_length(identifier) {
         } else {
-            // TODO return meaningful error message
-            println!("Unknown message identifier");
-            return;
+            return Err("Unknown message identifier".to_string());
         }
         let crc_vector = self.u8_array_to_u32_array(&packet[..packet.len() - 4]);
         let calcualted_crc32: u32 = self.crc_stm32(&crc_vector);
         let received_crc32: u32 =
             u32::from_le_bytes(packet[packet.len() - 4..packet.len()].try_into().unwrap());
         if calcualted_crc32 != received_crc32 {
-            // TODO: Handle error when CRCs do not match
-            eprintln!("Received CRC32 does not match calcualted CRC32");
-            // return;
+            return Err("Received CRC32 does not match calcualted CRC32".to_string());
         }
-        println!("Decode a packet");
-        self.decode_packet(identifier, &packet[10..packet.len() - 4]);
+        return Ok(self.decode_packet(identifier, &packet[10..packet.len() - 4]));
+
     }
 
     fn get_payload_length(&mut self, identifier: u16) -> Option<usize> {
@@ -139,9 +127,9 @@ impl PacketDecoder {
         }
     }
 
-    fn decode_packet(&mut self, identifier: u16, payload: &[u8]) {
+    fn decode_packet(&mut self, identifier: u16, payload: &[u8]) -> (String, String) {
         let mut mqtt_topic = format!("Strelka_{}", self.sender_id);
-        let mut mqtt_payload = String::new();
+        let mut mqtt_payload: String = String::new();
 
         match identifier {
             definitions::BAT_VOL_RES => {
@@ -254,8 +242,8 @@ impl PacketDecoder {
             "Identifier: {}\nTopic: {}\nPayload: {}",
             identifier, mqtt_topic, mqtt_payload
         );
-        self.mqtt_client
-            .publish(mqtt_topic, QoS::AtLeastOnce, false, mqtt_payload);
+
+        return (mqtt_topic, mqtt_payload);
     }
 
     fn crc_stm32(&mut self, data: &[u32]) -> u32 {
@@ -286,9 +274,24 @@ impl PacketDecoder {
     }
 }
 
-fn main() {
+async fn event_loop(mut eventloop: EventLoop) {
+    loop {
+        match eventloop.poll().await {
+            Ok(event) => {
+                println!("Received = {:?}", event);
+            }
+            Err(err) => {
+                eprintln!("Error: {}", err);
+            }
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    // Assuming {
     /* USB COM Port Settings */
-    let baud_rate = 9600;
+    let baud_rate = 115200;
     let mut com_port = String::from("");
 
     /* MQTT Settings */
@@ -299,6 +302,8 @@ fn main() {
         PacketDecoder::new(broker_address.to_owned(), mqtt_port, client_id.to_owned());
 
     let ports = serialport::available_ports().expect("Error: No COM ports available");
+
+    
 
     // Iterate over the ports and check if any matches the Arduino's characteristics
     for port in &ports {
@@ -319,30 +324,45 @@ fn main() {
     println!("Reading from {} port", com_port);   
 
     let mut port = serialport::new(com_port, baud_rate)
-        .timeout(Duration::from_millis(10))
+        .timeout(Duration::from_millis(20))
         .open()
         .expect("Failed to open port");
 
+    // Establish MQTT connection
+    let mut mqttoptions = MqttOptions::new(client_id, broker_address, mqtt_port);
+    mqttoptions.set_keep_alive(Duration::from_secs(5));
+    
+    let (mut client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
+
+    tokio::spawn(event_loop(eventloop));
+
     loop {
-        let mut serial_buffer: Vec<u8> = Vec::new();
-        let mut bytes_available = port.bytes_to_read().unwrap();
-        if bytes_available > 0 {
-            println!("Bytes avaiable: {}", bytes_available);
+        let mut bytes_available = 0;
+        if port.bytes_to_read().unwrap() > 0 {
+            // Wait for all the bytes to slowly arrive over the USB
+            let delay_time_ms = time::Duration::from_millis(25);
+            time::sleep(delay_time_ms).await;
+
+            bytes_available = port.bytes_to_read().unwrap();
             let mut read_buffer: Vec<u8> = vec![0; bytes_available as usize];
             let bytes_read = port.read_exact(&mut read_buffer).unwrap();
-            println!("Bytes read: {:#?}", bytes_read);
-            println!("Serial buffer: {:#?}", read_buffer);
-            // decoder.handle_packet(&serial_buf.to_vec());
-
-            for byte in read_buffer {
-                // Append until newline character is read
-                if byte != 0x0A {
-                    serial_buffer.push(byte);
+            println!("Bytes read: {}", bytes_available);
+            match decoder.handle_packet(&read_buffer.to_vec()) {
+                Ok((mqtt_topic, mqtt_payload)) => {
+                    let async_client = client.clone();
+                    println!("Sending packet");
+                    task::spawn(async move {
+                        async_client.publish(mqtt_topic.clone(), QoS::AtLeastOnce, false, mqtt_payload.clone()).await.unwrap();
+                        time::sleep(Duration::from_millis(100)).await;
+                    });
                 }
-                else {
-                    break;
+                Err(err) => {
+                    eprintln!("Error: {}", err);
+                    // TODO: handle the error case
                 }
-            }
+                // Flush USB buffer
+            }         
+            println!("PAcket send");   
         }
     }
 }
