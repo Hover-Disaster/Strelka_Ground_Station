@@ -135,3 +135,13 @@ pub struct GpsTrackingPacket {
     pub altitude: f32,
     pub satellites_tracked: u8,
 }
+
+pub struct generic_packet {
+    pub(crate) identifier: u16,
+    pub(crate) sender_id: u32,
+    pub(crate) receiver_id: u32,
+    pub(crate) payload: Vec<u8>,
+    pub(crate) crc32: u32,
+}
+
+pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 17] = ["BatVolReq", "ContinuityReq", "FireDrogueReq", "FireMainReq", "GPS1StateReq", "GPS2StateReq", "Accel1StateReq", "Accel2StateReq", "Gyro1StateReq", "Gyro2StateReq", "Mag1StateReq", "Mag2StateReq", "Baro1StateReq", "Baro2StateReq", "FlashMemoryStateReq", "FlashMemoryConfigSet", "GPSTrackingConfigSet"];

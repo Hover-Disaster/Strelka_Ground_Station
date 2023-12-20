@@ -553,6 +553,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "binread",
+ "bytes 1.5.0",
  "mqtt",
  "rumqttc",
  "serde",

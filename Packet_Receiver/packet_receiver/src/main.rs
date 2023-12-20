@@ -4,13 +4,16 @@ use data_structures::{
     FireDrogueRes, FireMainRes, FlashStateRes, Gps1StateRes, Gps2StateRes, GpsTrackingConfigRes,
     GpsTrackingPacket, Gyro1StateRes, Gyro2StateRes, Mag1StateRes, Mag2StateRes,
 };
+use mqtt::Packet;
 use serde::{Deserialize, Serialize};
-use rumqttc::{MqttOptions, AsyncClient, QoS, EventLoop};
+use rumqttc::{MqttOptions, AsyncClient, QoS, EventLoop, Event, Incoming};
+use serde_json::to_string;
 use tokio::{task, time};
 use std::time::Duration;
 use std::error::Error;
+use bytes::{Buf, Bytes};
 
-use serialport::{SerialPortType, UsbPortInfo, ClearBuffer};
+use serialport::{SerialPortType, UsbPortInfo, ClearBuffer, SerialPort};
 pub mod data_structures;
 pub mod definitions;
 
@@ -20,41 +23,120 @@ const SENDER_HARDWARE_ID: u32 = 0x00;
 
 const MIN_PACKET_SIZE: usize = 13;
 
-struct PacketDecoder {
-    sender_id: u32,
-    broker_address: String,
-    client_id: String,
-    port: u16,
+struct PacketHander {
+    current_node_ids: Vec<u32>,
 }
 
-impl PacketDecoder {
+impl PacketHander {
     /*
     TODO:
     - Check list of valid sender IDs
     - Return meaningful values when erroring out
      */
-    fn new(broker_address: String, port: u16, client_id: String) -> Self {
-        return PacketDecoder {
-            sender_id: 0x00,
-            broker_address: broker_address.to_string(),
-            port: port,
-            client_id: client_id,
+    fn new(current_node_ids: &Vec<u32>) -> Self {
+        return PacketHander {
+            current_node_ids: Vec::new(),
         };
     }
-    fn handle_packet(&mut self, packet: &Vec<u8>) -> Result<(String, String), String> {
+
+    fn handle_downstream_packet(&mut self, topic: &String, payload: &Bytes) -> Result<Vec<u8>, String> {
+        // Extract receiver_id from topic
+        let mut receiver_id = 0;
+        let topic_fields: Vec<&str> = topic.split('/').collect();       // split into [Node_{receiver_id}, subtopic]
+        if let Some(index) = topic_fields[0].find('_') {
+            // Extract all characters after '_' and convert to receiver_id (u32)
+            receiver_id = topic_fields[0][(index + 1)..].parse::<u32>().unwrap();
+        } else {
+            // Handle the case where '_' is not found
+            eprintln!("No receiver_id found in incoming topic: {}", topic_fields[0]);
+        }
+        // Construct generic packet struct for easy serialisation to bytes later
+        let mut packet = data_structures::generic_packet {
+            identifier: 0x00,
+            sender_id: SENDER_HARDWARE_ID,
+            receiver_id: receiver_id,
+            payload: vec![],
+            crc32: 0,    // Gateway ID
+        };
+
+        let mut encoded_bytes = Vec::new();
+        match topic.as_str() {
+            "BatVolReq" => {
+                packet.identifier = definitions::BAT_VOL_REQ;
+            }
+            "ContinuityReq" => {
+                packet.identifier = definitions::CONTINUITY_REQ;
+            }
+            "FireDrogueReq" => {
+                packet.identifier = definitions::FIRE_DROGUE_REQ;
+            }
+            "FireMainReq" => {
+                packet.identifier = definitions::FIRE_MAIN_REQ;
+            }
+            "GPS1StateReq" => {
+                packet.identifier = definitions::GPS1_STATE_REQ;
+            }
+            "GPS2StateReq" => {
+                packet.identifier = definitions::GPS2_STATE_REQ;
+            }
+            "Accel1StateReq" => {
+                packet.identifier = definitions::ACCEL1_STATE_REQ;
+            }
+            "Accel2StateReq" => {
+                packet.identifier = definitions::ACCEL2_STATE_REQ;
+            }
+            "Gyro1StateReq" => {
+                packet.identifier = definitions::GYRO1_STATE_REQ;
+            }
+            "Gyro2StateReq" => {
+                packet.identifier = definitions::GYRO2_STATE_REQ;
+            }
+            "Mag1StateReq" => {
+                packet.identifier = definitions::MAG1_STATE_REQ;
+            }
+            "Mag2StateReq" => {
+                packet.identifier = definitions::MAG2_STATE_REQ;
+            }
+            "Baro1StateReq" => {
+                packet.identifier = definitions::BARO1_STATE_REQ;
+            }
+            "Baro2StateReq" => {
+                packet.identifier = definitions::BARO2_STATE_REQ;
+            }
+            "FlashMemoryStateReq" => {
+                packet.identifier = definitions::FLASH_MEMORY_STATE_REQ;
+            }
+            "FlashMemoryConfigSet" => {
+                packet.identifier = definitions::FLASH_MEMORY_CONFIG_SET;
+            }
+            "GPSTrackingConfigSet" => {
+                packet.identifier = definitions::GPS_TRACKING_CONFIG_SET;
+            }
+            _ => {
+                eprintln!("Received packet from an unrecognised topic");
+            }
+            // TODO: Calculate CRC32 for packet struct then serialise and return the encoded_bytes
+        }
+        return Ok(encoded_bytes);
+    }
+
+    fn handle_upstream_packet(&mut self, packet: &Vec<u8>) -> Result<(String, String), String> {
         if packet.len() < MIN_PACKET_SIZE {
             return Err("Packet incomplete, dropped".to_string());
         }
         // Check header bytes
         let identifier = u16::from_le_bytes([packet[0], packet[1]]);
-        self.sender_id = u32::from_le_bytes(packet[2..6].try_into().unwrap());
+        let incoming_sender_id = u32::from_le_bytes(packet[2..6].try_into().unwrap());
         let receiver_id = u32::from_le_bytes(packet[6..10].try_into().unwrap());
+
+        // Check if incoming node id is known
+        if !self.current_node_ids.contains(&incoming_sender_id) {
+            // If not, add it to the list
+            self.current_node_ids.push(incoming_sender_id);
+        }
+
         if receiver_id != RECEIVER_HARDWARE_ID {
             return Err("Receiver id does not match receiver hardware id".to_string());
-        }
-        // TODO: Check a file containing all valid sender IDs
-        else if self.sender_id != SENDER_HARDWARE_ID {
-            return Err("RSender id does not match sender hardware id".to_string());
         }
         if let Some(payload_length) = self.get_payload_length(identifier) {
         } else {
@@ -67,7 +149,7 @@ impl PacketDecoder {
         if calcualted_crc32 != received_crc32 {
             return Err("Received CRC32 does not match calcualted CRC32".to_string());
         }
-        return Ok(self.decode_packet(identifier, &packet[10..packet.len() - 4]));
+        return Ok(self.decode_packet(identifier, &packet[10..packet.len() - 4], incoming_sender_id));
 
     }
 
@@ -127,8 +209,8 @@ impl PacketDecoder {
         }
     }
 
-    fn decode_packet(&mut self, identifier: u16, payload: &[u8]) -> (String, String) {
-        let mut mqtt_topic = format!("Strelka_{}", self.sender_id);
+    fn decode_packet(&mut self, identifier: u16, payload: &[u8], incoming_sender_id: u32) -> (String, String) {
+        let mut mqtt_topic = format!("Node_{}", incoming_sender_id);
         let mut mqtt_payload: String = String::new();
 
         match identifier {
@@ -238,10 +320,10 @@ impl PacketDecoder {
             _ => {}
         }
 
-        println!(
-            "Identifier: {}\nTopic: {}\nPayload: {}",
-            identifier, mqtt_topic, mqtt_payload
-        );
+        // println!(
+        //     "Identifier: {}\nTopic: {}\nPayload: {}",
+        //     identifier, mqtt_topic, mqtt_payload
+        // );
 
         return (mqtt_topic, mqtt_payload);
     }
@@ -274,10 +356,35 @@ impl PacketDecoder {
     }
 }
 
-async fn event_loop(mut eventloop: EventLoop) {
+async fn event_loop(mut eventloop: EventLoop, mut port: Box<dyn SerialPort>, mut packet_handler: PacketHander) {
     loop {
         match eventloop.poll().await {
             Ok(event) => {
+                match &event {
+                    rumqttc::Event::Incoming(packet) => {
+                        match packet {
+                            rumqttc::Packet::Connect(_) => {},
+                            rumqttc::Packet::ConnAck(_) => {},
+                            rumqttc::Packet::Publish(incoming_packet) => {
+                                match packet_handler.handle_downstream_packet(&incoming_packet.topic, &incoming_packet.payload) {
+                                    Ok(encoded_bytes) => {
+                                        // TODO: Transmit these encoded bytes over Serialport to the arduino
+                                        port.write(&encoded_bytes);
+                                    }
+                                    Err(err) => {
+                                        eprintln!("Error: {}", err);
+                                    }
+                                }
+
+                                println!("RECEIVED VALID PACKET!!!! WOOOOHOOOOO");
+                                println!("topic: {}, payload: {:#?}", incoming_packet.topic, incoming_packet.payload)
+
+                            },
+                            _ => {},
+                        }
+                    },
+                    rumqttc::Event::Outgoing(outgoing_packet) => {},
+                }
                 println!("Received = {:?}", event);
             }
             Err(err) => {
@@ -289,7 +396,9 @@ async fn event_loop(mut eventloop: EventLoop) {
 
 #[tokio::main]
 async fn main() {
-    // Assuming {
+    /* Node Identification Settings */
+    let current_node_ids = vec![0x00, 0x01];           // <--- Add hardware IDs of known nodes here!!
+
     /* USB COM Port Settings */
     let baud_rate = 115200;
     let mut com_port = String::from("");
@@ -298,8 +407,7 @@ async fn main() {
     let broker_address = "192.168.0.11";
     let mqtt_port = 1883;
     let client_id = "test";
-    let mut decoder: PacketDecoder =
-        PacketDecoder::new(broker_address.to_owned(), mqtt_port, client_id.to_owned());
+    let mut packet_hander: PacketHander = PacketHander::new( &current_node_ids );
 
     let ports = serialport::available_ports().expect("Error: No COM ports available");
 
@@ -334,7 +442,27 @@ async fn main() {
     
     let (mut client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
 
-    tokio::spawn(event_loop(eventloop));
+    // Spawn async event loop to handle MQTT events
+    println!("Spawning event loop");
+    tokio::spawn(event_loop(eventloop, port, packet_hander));
+
+    // Subscribe to all relevent topics for known node IDs. This allows downstream packets to be forwarded to the nodes
+    for node_id in &current_node_ids {
+        for downstream_topic in &data_structures::DOWNSTREAM_TOPICS {
+            let topic = format!("Node_{}/{}", node_id, downstream_topic);
+            match client.subscribe(&topic, QoS::AtMostOnce).await {
+                Ok(()) => {
+                    // println!("Subscribed to {}", topic);
+                }
+                Err(err) => {
+                    eprintln!("Error subscribing to {}: {}", topic, err);
+                }
+            }
+            time::sleep(Duration::from_millis(10)).await;
+        }
+    }
+
+    
 
     loop {
         let mut bytes_available = 0;
@@ -347,10 +475,9 @@ async fn main() {
             let mut read_buffer: Vec<u8> = vec![0; bytes_available as usize];
             let bytes_read = port.read_exact(&mut read_buffer).unwrap();
             println!("Bytes read: {}", bytes_available);
-            match decoder.handle_packet(&read_buffer.to_vec()) {
+            match packet_hander.handle_upstream_packet(&read_buffer.to_vec()) {
                 Ok((mqtt_topic, mqtt_payload)) => {
                     let async_client = client.clone();
-                    println!("Sending packet");
                     task::spawn(async move {
                         async_client.publish(mqtt_topic.clone(), QoS::AtLeastOnce, false, mqtt_payload.clone()).await.unwrap();
                         time::sleep(Duration::from_millis(100)).await;
@@ -360,9 +487,7 @@ async fn main() {
                     eprintln!("Error: {}", err);
                     // TODO: handle the error case
                 }
-                // Flush USB buffer
-            }         
-            println!("PAcket send");   
+            }          
         }
     }
 }
