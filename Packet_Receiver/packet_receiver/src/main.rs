@@ -2,16 +2,17 @@ use binread::{io::Cursor, BinRead, BinReaderExt};
 use data_structures::{
     Accel1StateRes, Accel2StateRes, Baro1StateRes, Baro2StateRes, BatVolRes, ContinuityRes,
     FireDrogueRes, FireMainRes, FlashStateRes, Gps1StateRes, Gps2StateRes, GpsTrackingConfigRes,
-    GpsTrackingPacket, Gyro1StateRes, Gyro2StateRes, Mag1StateRes, Mag2StateRes,
+    GpsTrackingPacket, Gyro1StateRes, Gyro2StateRes, Mag1StateRes, Mag2StateRes, GpsTrackingConfigSet,
 };
 use mqtt::Packet;
 use serde::{Deserialize, Serialize};
 use rumqttc::{MqttOptions, AsyncClient, QoS, EventLoop, Event, Incoming};
-use serde_json::to_string;
+use serde_json::{to_string, from_slice, from_str};
 use tokio::{task, time};
 use std::time::Duration;
 use std::error::Error;
 use bytes::{Buf, Bytes};
+use std::sync::{Arc, Mutex};
 
 use serialport::{SerialPortType, UsbPortInfo, ClearBuffer, SerialPort};
 pub mod data_structures;
@@ -23,18 +24,18 @@ const SENDER_HARDWARE_ID: u32 = 0x00;
 
 const MIN_PACKET_SIZE: usize = 13;
 
-struct PacketHander {
+struct PacketHandler {
     current_node_ids: Vec<u32>,
 }
 
-impl PacketHander {
+impl PacketHandler {
     /*
     TODO:
     - Check list of valid sender IDs
     - Return meaningful values when erroring out
      */
     fn new(current_node_ids: &Vec<u32>) -> Self {
-        return PacketHander {
+        return PacketHandler {
             current_node_ids: Vec::new(),
         };
     }
@@ -55,12 +56,12 @@ impl PacketHander {
             identifier: 0x00,
             sender_id: SENDER_HARDWARE_ID,
             receiver_id: receiver_id,
-            payload: vec![],
             crc32: 0,    // Gateway ID
         };
 
         let mut encoded_bytes = Vec::new();
-        match topic.as_str() {
+        let mut payload_bytes: Vec<u8> = Vec::new();
+        match topic_fields[1] {
             "BatVolReq" => {
                 packet.identifier = definitions::BAT_VOL_REQ;
             }
@@ -108,15 +109,48 @@ impl PacketHander {
             }
             "FlashMemoryConfigSet" => {
                 packet.identifier = definitions::FLASH_MEMORY_CONFIG_SET;
+                // TODO: Add payload field into packet
+                // payload_bytes = 
             }
             "GPSTrackingConfigSet" => {
+                // Good test cmd for this packet: mosquitto_pub -h 192.168.0.11 -p 1883 -t Node_0/GPSTrackingConfigSet -m '{"chirp_frequency":1, "tracking_enabled":1}'
                 packet.identifier = definitions::GPS_TRACKING_CONFIG_SET;
+                // Unpack json payload bytes into struct
+                // Convert Bytes to Vec<u8>
+                let payload_byte_str: Vec<u8> = payload.to_vec();
+
+                // Parse the JSON string into your struct
+                match serde_json::from_slice::<GpsTrackingConfigSet>(&payload_byte_str) {
+                    Ok(gps_tracking_payload) => {
+                        // Successfully deserialized
+                        // println!("{:?}", gps_tracking_payload);
+                        payload_bytes = bincode::serialize(&gps_tracking_payload).unwrap();
+
+                    }
+                    Err(err) => {
+                        eprintln!("Error deserializing JSON: {}", err);
+                    }
+                }                 
             }
             _ => {
                 eprintln!("Received packet from an unrecognised topic");
             }
-            // TODO: Calculate CRC32 for packet struct then serialise and return the encoded_bytes
         }
+
+        // Serialise packet into byte array
+        encoded_bytes = bincode::serialize(&packet).unwrap();
+        if !payload_bytes.is_empty() {
+            let payload_index_offset = 10;
+            // Insert payload bytes into packet after receiver_id field
+            for (i,b) in payload_bytes.iter().enumerate() {
+                encoded_bytes.insert(payload_index_offset+i, *b);
+            }
+        }
+        // Calculate CRC
+        let crc_array = self.u8_array_to_u32_array(&encoded_bytes[..&encoded_bytes.len()-4]);
+        let crc32_bytes: [u8; 4] = self.crc_stm32(&crc_array).to_le_bytes();
+        let len = encoded_bytes.len();
+        encoded_bytes[len - 4..].copy_from_slice(&crc32_bytes);
         return Ok(encoded_bytes);
     }
 
@@ -356,7 +390,7 @@ impl PacketHander {
     }
 }
 
-async fn event_loop(mut eventloop: EventLoop, mut port: Box<dyn SerialPort>, mut packet_handler: PacketHander) {
+async fn event_loop(mut eventloop: EventLoop, port: Arc<Mutex<Box<dyn SerialPort>>>, packet_handler: Arc<Mutex<PacketHandler>>) {
     loop {
         match eventloop.poll().await {
             Ok(event) => {
@@ -366,26 +400,25 @@ async fn event_loop(mut eventloop: EventLoop, mut port: Box<dyn SerialPort>, mut
                             rumqttc::Packet::Connect(_) => {},
                             rumqttc::Packet::ConnAck(_) => {},
                             rumqttc::Packet::Publish(incoming_packet) => {
-                                match packet_handler.handle_downstream_packet(&incoming_packet.topic, &incoming_packet.payload) {
+                                // Take mutex on asynchronous packet_handler struct
+                                let mut locked_handler = packet_handler.lock().unwrap();
+                                match locked_handler.handle_downstream_packet(&incoming_packet.topic, &incoming_packet.payload) {
                                     Ok(encoded_bytes) => {
                                         // TODO: Transmit these encoded bytes over Serialport to the arduino
-                                        port.write(&encoded_bytes);
+                                        let mut locked_port = port.lock().unwrap();
+                                        let _ = locked_port.write(&encoded_bytes);
                                     }
                                     Err(err) => {
                                         eprintln!("Error: {}", err);
                                     }
                                 }
-
-                                println!("RECEIVED VALID PACKET!!!! WOOOOHOOOOO");
-                                println!("topic: {}, payload: {:#?}", incoming_packet.topic, incoming_packet.payload)
-
                             },
                             _ => {},
                         }
                     },
                     rumqttc::Event::Outgoing(outgoing_packet) => {},
                 }
-                println!("Received = {:?}", event);
+                // println!("Received = {:?}", event);
             }
             Err(err) => {
                 eprintln!("Error: {}", err);
@@ -407,7 +440,8 @@ async fn main() {
     let broker_address = "192.168.0.11";
     let mqtt_port = 1883;
     let client_id = "test";
-    let mut packet_hander: PacketHander = PacketHander::new( &current_node_ids );
+    let mut async_packet_handler = Arc::new(Mutex::new(PacketHandler::new( &current_node_ids )));
+    let main_packet_handler = Arc::clone(&async_packet_handler);
 
     let ports = serialport::available_ports().expect("Error: No COM ports available");
 
@@ -431,10 +465,11 @@ async fn main() {
 
     println!("Reading from {} port", com_port);   
 
-    let mut port = serialport::new(com_port, baud_rate)
+    let mut port = Arc::new(Mutex::new(serialport::new(com_port, baud_rate)
         .timeout(Duration::from_millis(20))
         .open()
-        .expect("Failed to open port");
+        .expect("Failed to open port")));
+    let async_port = Arc::clone(&port);
 
     // Establish MQTT connection
     let mut mqttoptions = MqttOptions::new(client_id, broker_address, mqtt_port);
@@ -444,7 +479,7 @@ async fn main() {
 
     // Spawn async event loop to handle MQTT events
     println!("Spawning event loop");
-    tokio::spawn(event_loop(eventloop, port, packet_hander));
+    tokio::spawn(event_loop(eventloop, port, async_packet_handler));
 
     // Subscribe to all relevent topics for known node IDs. This allows downstream packets to be forwarded to the nodes
     for node_id in &current_node_ids {
@@ -466,16 +501,19 @@ async fn main() {
 
     loop {
         let mut bytes_available = 0;
-        if port.bytes_to_read().unwrap() > 0 {
+        let mut locked_port =  async_port.lock().unwrap();
+        if locked_port.bytes_to_read().unwrap() > 0 {
             // Wait for all the bytes to slowly arrive over the USB
             let delay_time_ms = time::Duration::from_millis(25);
             time::sleep(delay_time_ms).await;
 
-            bytes_available = port.bytes_to_read().unwrap();
+            bytes_available = locked_port.bytes_to_read().unwrap();
             let mut read_buffer: Vec<u8> = vec![0; bytes_available as usize];
-            let bytes_read = port.read_exact(&mut read_buffer).unwrap();
+            let bytes_read = locked_port.read_exact(&mut read_buffer).unwrap();
             println!("Bytes read: {}", bytes_available);
-            match packet_hander.handle_upstream_packet(&read_buffer.to_vec()) {
+            // Take mutex on asynchronous packet handler
+            let mut locked_handler = main_packet_handler.lock().unwrap();
+            match locked_handler.handle_upstream_packet(&read_buffer.to_vec()) {
                 Ok((mqtt_topic, mqtt_payload)) => {
                     let async_client = client.clone();
                     task::spawn(async move {
@@ -488,6 +526,9 @@ async fn main() {
                     // TODO: handle the error case
                 }
             }          
+        }
+        else {
+            drop(locked_port);
         }
     }
 }

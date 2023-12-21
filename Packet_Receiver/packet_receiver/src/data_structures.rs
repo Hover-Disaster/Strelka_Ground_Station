@@ -136,11 +136,12 @@ pub struct GpsTrackingPacket {
     pub satellites_tracked: u8,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct generic_packet {
     pub(crate) identifier: u16,
     pub(crate) sender_id: u32,
     pub(crate) receiver_id: u32,
-    pub(crate) payload: Vec<u8>,
+    // Note* No payload field included. This must be spliced in after serialisation of the struct
     pub(crate) crc32: u32,
 }
 
