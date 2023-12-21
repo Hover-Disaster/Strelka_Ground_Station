@@ -151,6 +151,7 @@ impl PacketHandler {
         let crc32_bytes: [u8; 4] = self.crc_stm32(&crc_array).to_le_bytes();
         let len = encoded_bytes.len();
         encoded_bytes[len - 4..].copy_from_slice(&crc32_bytes);
+        println!("Sending payload bytes to LoRa: {:?}", encoded_bytes);
         return Ok(encoded_bytes);
     }
 
@@ -354,10 +355,10 @@ impl PacketHandler {
             _ => {}
         }
 
-        // println!(
-        //     "Identifier: {}\nTopic: {}\nPayload: {}",
-        //     identifier, mqtt_topic, mqtt_payload
-        // );
+        println!(
+            "Identifier: {}\nTopic: {}\nPayload: {}",
+            identifier, mqtt_topic, mqtt_payload
+        );
 
         return (mqtt_topic, mqtt_payload);
     }
@@ -406,7 +407,8 @@ async fn event_loop(mut eventloop: EventLoop, port: Arc<Mutex<Box<dyn SerialPort
                                     Ok(encoded_bytes) => {
                                         // TODO: Transmit these encoded bytes over Serialport to the arduino
                                         let mut locked_port = port.lock().unwrap();
-                                        let _ = locked_port.write(&encoded_bytes);
+                                        let bytes_written = locked_port.write(&encoded_bytes).unwrap();
+                                        println!("Written {} to USB", bytes_written);
                                     }
                                     Err(err) => {
                                         eprintln!("Error: {}", err);
@@ -439,7 +441,7 @@ async fn main() {
     /* MQTT Settings */
     let broker_address = "192.168.0.11";
     let mqtt_port = 1883;
-    let client_id = "test";
+    let client_id = "lora_receiver";
     let mut async_packet_handler = Arc::new(Mutex::new(PacketHandler::new( &current_node_ids )));
     let main_packet_handler = Arc::clone(&async_packet_handler);
 
