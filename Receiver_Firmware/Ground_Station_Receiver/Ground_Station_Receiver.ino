@@ -3,10 +3,12 @@
 
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   while (!Serial);
   while (!LoRa.begin(915E6)) {
   }
+  LoRa.setPreambleLength(8);
+//  LoRa.setSignalBandwidth(500000);
 }
 
 
@@ -21,10 +23,14 @@ void loop() {
   }
 
   if (Serial.available() > 0) {
-    byte readByte = Serial.parseInt();
-    Serial.println(readByte);
+    delay(10);
     LoRa.beginPacket();
-    LoRa.write(readByte);
-    LoRa.endPacket(false);
+    
+    while (Serial.available() > 0) {
+      byte readByte = Serial.read();
+      LoRa.write(readByte);      
     }
+    
+    LoRa.endPacket(false);
+  }    
 }

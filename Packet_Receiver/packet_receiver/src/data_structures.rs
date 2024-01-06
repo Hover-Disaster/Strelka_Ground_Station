@@ -145,4 +145,4 @@ pub struct generic_packet {
     pub(crate) crc32: u32,
 }
 
-pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 17] = ["BatVolReq", "ContinuityReq", "FireDrogueReq", "FireMainReq", "GPS1StateReq", "GPS2StateReq", "Accel1StateReq", "Accel2StateReq", "Gyro1StateReq", "Gyro2StateReq", "Mag1StateReq", "Mag2StateReq", "Baro1StateReq", "Baro2StateReq", "FlashMemoryStateReq", "FlashMemoryConfigSet", "GPSTrackingConfigSet"];
+pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 18] = ["BatVolReq", "ContinuityReq", "FireDrogueReq", "FireMainReq", "Gps1StateReq", "Gps2StateReq", "Accel1StateReq", "Accel2StateReq", "Gyro1StateReq", "Gyro2StateReq", "Mag1StateReq", "Mag2StateReq", "Baro1StateReq", "Baro2StateReq", "FlashMemoryStateReq", "FlashMemoryConfigSet", "GpsTrackingConfigReq", "GpsTrackingConfigSet"];

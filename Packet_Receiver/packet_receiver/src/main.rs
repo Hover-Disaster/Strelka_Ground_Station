@@ -74,10 +74,10 @@ impl PacketHandler {
             "FireMainReq" => {
                 packet.identifier = definitions::FIRE_MAIN_REQ;
             }
-            "GPS1StateReq" => {
+            "Gps1StateReq" => {
                 packet.identifier = definitions::GPS1_STATE_REQ;
             }
-            "GPS2StateReq" => {
+            "Gps2StateReq" => {
                 packet.identifier = definitions::GPS2_STATE_REQ;
             }
             "Accel1StateReq" => {
@@ -112,8 +112,11 @@ impl PacketHandler {
                 // TODO: Add payload field into packet
                 // payload_bytes = 
             }
-            "GPSTrackingConfigSet" => {
-                // Good test cmd for this packet: mosquitto_pub -h 192.168.0.11 -p 1883 -t Node_0/GPSTrackingConfigSet -m '{"chirp_frequency":1, "tracking_enabled":1}'
+            "GpsTrackingConfigReq" => {
+                packet.identifier = definitions::GPS_TRACKING_CONFIG_REQ;
+            }
+            "GpsTrackingConfigSet" => {
+                // Good test cmd for this packet: mosquitto_pub -h 192.168.0.11 -p 1883 -t Node_0/GpsTrackingConfigSet -m '{"chirp_frequency":1, "tracking_enabled":1}'
                 packet.identifier = definitions::GPS_TRACKING_CONFIG_SET;
                 // Unpack json payload bytes into struct
                 // Convert Bytes to Vec<u8>
@@ -169,7 +172,6 @@ impl PacketHandler {
             // If not, add it to the list
             self.current_node_ids.push(incoming_sender_id);
         }
-
         if receiver_id != RECEIVER_HARDWARE_ID {
             return Err("Receiver id does not match receiver hardware id".to_string());
         }
@@ -352,7 +354,7 @@ impl PacketHandler {
                 mqtt_payload = serde_json::to_string(&gps_tracking_packet)
                     .expect("Failed to serialize to JSON packet");
             }
-            _ => {}
+            _ => {eprintln!("Unable to match identifier: {}", identifier);}
         }
 
         println!(
@@ -432,14 +434,14 @@ async fn event_loop(mut eventloop: EventLoop, port: Arc<Mutex<Box<dyn SerialPort
 #[tokio::main]
 async fn main() {
     /* Node Identification Settings */
-    let current_node_ids = vec![0x00, 0x01];           // <--- Add hardware IDs of known nodes here!!
+    let current_node_ids = vec![537093200, 0];           // <--- Add hardware IDs of known nodes here!!
 
     /* USB COM Port Settings */
     let baud_rate = 115200;
     let mut com_port = String::from("");
 
     /* MQTT Settings */
-    let broker_address = "192.168.0.11";
+    let broker_address = "localhost";
     let mqtt_port = 1883;
     let client_id = "lora_receiver";
     let mut async_packet_handler = Arc::new(Mutex::new(PacketHandler::new( &current_node_ids )));
@@ -519,6 +521,7 @@ async fn main() {
                 Ok((mqtt_topic, mqtt_payload)) => {
                     let async_client = client.clone();
                     task::spawn(async move {
+                        println!("Publishing to topic: {}", mqtt_topic);
                         async_client.publish(mqtt_topic.clone(), QoS::AtLeastOnce, false, mqtt_payload.clone()).await.unwrap();
                         time::sleep(Duration::from_millis(100)).await;
                     });
