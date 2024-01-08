@@ -25,7 +25,8 @@ const SENDER_HARDWARE_ID: u32 = 0x00;
 const MIN_PACKET_SIZE: usize = 13;
 
 struct PacketHandler {
-    current_node_ids: Vec<u32>,
+    pub current_node_ids: Vec<u32>,
+    pub update_current_nodes: bool,
 }
 
 impl PacketHandler {
@@ -37,125 +38,147 @@ impl PacketHandler {
     fn new(current_node_ids: &Vec<u32>) -> Self {
         return PacketHandler {
             current_node_ids: Vec::new(),
+            update_current_nodes: false,
         };
     }
 
     fn handle_downstream_packet(&mut self, topic: &String, payload: &Bytes) -> Result<Vec<u8>, String> {
         // Extract receiver_id from topic
         let mut receiver_id = 0;
-        let topic_fields: Vec<&str> = topic.split('/').collect();       // split into [Node_{receiver_id}, subtopic]
-        if let Some(index) = topic_fields[0].find('_') {
-            // Extract all characters after '_' and convert to receiver_id (u32)
-            receiver_id = topic_fields[0][(index + 1)..].parse::<u32>().unwrap();
-        } else {
-            // Handle the case where '_' is not found
-            eprintln!("No receiver_id found in incoming topic: {}", topic_fields[0]);
-        }
-        // Construct generic packet struct for easy serialisation to bytes later
-        let mut packet = data_structures::generic_packet {
-            identifier: 0x00,
-            sender_id: SENDER_HARDWARE_ID,
-            receiver_id: receiver_id,
-            crc32: 0,    // Gateway ID
-        };
-
-        let mut encoded_bytes = Vec::new();
-        let mut payload_bytes: Vec<u8> = Vec::new();
-        match topic_fields[1] {
-            "BatVolReq" => {
-                packet.identifier = definitions::BAT_VOL_REQ;
+        // println!("Data received from topic: {:?}", topic.as_str());
+        if topic.as_str() == "current_node_ids" {
+            // Current node id array received
+            #[derive(Debug, Deserialize)]
+            struct incoming_data {
+                id_array: Vec<u32>,
             }
-            "ContinuityReq" => {
-                packet.identifier = definitions::CONTINUITY_REQ;
-            }
-            "FireDrogueReq" => {
-                packet.identifier = definitions::FIRE_DROGUE_REQ;
-            }
-            "FireMainReq" => {
-                packet.identifier = definitions::FIRE_MAIN_REQ;
-            }
-            "Gps1StateReq" => {
-                packet.identifier = definitions::GPS1_STATE_REQ;
-            }
-            "Gps2StateReq" => {
-                packet.identifier = definitions::GPS2_STATE_REQ;
-            }
-            "Accel1StateReq" => {
-                packet.identifier = definitions::ACCEL1_STATE_REQ;
-            }
-            "Accel2StateReq" => {
-                packet.identifier = definitions::ACCEL2_STATE_REQ;
-            }
-            "Gyro1StateReq" => {
-                packet.identifier = definitions::GYRO1_STATE_REQ;
-            }
-            "Gyro2StateReq" => {
-                packet.identifier = definitions::GYRO2_STATE_REQ;
-            }
-            "Mag1StateReq" => {
-                packet.identifier = definitions::MAG1_STATE_REQ;
-            }
-            "Mag2StateReq" => {
-                packet.identifier = definitions::MAG2_STATE_REQ;
-            }
-            "Baro1StateReq" => {
-                packet.identifier = definitions::BARO1_STATE_REQ;
-            }
-            "Baro2StateReq" => {
-                packet.identifier = definitions::BARO2_STATE_REQ;
-            }
-            "FlashMemoryStateReq" => {
-                packet.identifier = definitions::FLASH_MEMORY_STATE_REQ;
-            }
-            "FlashMemoryConfigSet" => {
-                packet.identifier = definitions::FLASH_MEMORY_CONFIG_SET;
-                // TODO: Add payload field into packet
-                // payload_bytes = 
-            }
-            "GpsTrackingConfigReq" => {
-                packet.identifier = definitions::GPS_TRACKING_CONFIG_REQ;
-            }
-            "GpsTrackingConfigSet" => {
-                // Good test cmd for this packet: mosquitto_pub -h 192.168.0.11 -p 1883 -t Node_0/GpsTrackingConfigSet -m '{"chirp_frequency":1, "tracking_enabled":1}'
-                packet.identifier = definitions::GPS_TRACKING_CONFIG_SET;
-                // Unpack json payload bytes into struct
-                // Convert Bytes to Vec<u8>
-                let payload_byte_str: Vec<u8> = payload.to_vec();
-
-                // Parse the JSON string into your struct
-                match serde_json::from_slice::<GpsTrackingConfigSet>(&payload_byte_str) {
-                    Ok(gps_tracking_payload) => {
-                        // Successfully deserialized
-                        // println!("{:?}", gps_tracking_payload);
-                        payload_bytes = bincode::serialize(&gps_tracking_payload).unwrap();
-
-                    }
-                    Err(err) => {
-                        eprintln!("Error deserializing JSON: {}", err);
-                    }
-                }                 
-            }
-            _ => {
-                eprintln!("Received packet from an unrecognised topic");
+            let payload_byte_str: Vec<u8> = payload.to_vec();
+            let data_struct:incoming_data = serde_json::from_str(std::str::from_utf8(&payload_byte_str).unwrap()).unwrap();
+            let new_ids = data_struct.id_array;
+            // Add new ids to current node ids array
+            for &new_element in &new_ids {
+                if !self.current_node_ids.contains(&new_element) {
+                    self.current_node_ids.push(new_element);
+                    self.update_current_nodes = true;
+                }
             }
         }
-
-        // Serialise packet into byte array
-        encoded_bytes = bincode::serialize(&packet).unwrap();
-        if !payload_bytes.is_empty() {
-            let payload_index_offset = 10;
-            // Insert payload bytes into packet after receiver_id field
-            for (i,b) in payload_bytes.iter().enumerate() {
-                encoded_bytes.insert(payload_index_offset+i, *b);
+        else {
+            let topic_fields: Vec<&str> = topic.split('/').collect();       // split into [Node_{receiver_id}, subtopic]
+            if let Some(index) = topic_fields[0].find('_') {
+                // Extract all characters after '_' and convert to receiver_id (u32)
+                receiver_id = topic_fields[0][(index + 1)..].parse::<u32>().unwrap();
+            } else {
+                // Handle the case where '_' is not found
+                eprintln!("No receiver_id found in incoming topic: {}", topic_fields[0]);
             }
+            // Construct generic packet struct for easy serialisation to bytes later
+            let mut packet = data_structures::generic_packet {
+                identifier: 0x00,
+                sender_id: SENDER_HARDWARE_ID,
+                receiver_id: receiver_id,
+                crc32: 0,    // Gateway ID
+            };
+
+            let mut encoded_bytes = Vec::new();
+            let mut payload_bytes: Vec<u8> = Vec::new();
+            match topic_fields[1] {
+                "BatVolReq" => {
+                    packet.identifier = definitions::BAT_VOL_REQ;
+                }
+                "ContinuityReq" => {
+                    packet.identifier = definitions::CONTINUITY_REQ;
+                }
+                "FireDrogueReq" => {
+                    packet.identifier = definitions::FIRE_DROGUE_REQ;
+                }
+                "FireMainReq" => {
+                    packet.identifier = definitions::FIRE_MAIN_REQ;
+                }
+                "Gps1StateReq" => {
+                    packet.identifier = definitions::GPS1_STATE_REQ;
+                }
+                "Gps2StateReq" => {
+                    packet.identifier = definitions::GPS2_STATE_REQ;
+                }
+                "Accel1StateReq" => {
+                    packet.identifier = definitions::ACCEL1_STATE_REQ;
+                }
+                "Accel2StateReq" => {
+                    packet.identifier = definitions::ACCEL2_STATE_REQ;
+                }
+                "Gyro1StateReq" => {
+                    packet.identifier = definitions::GYRO1_STATE_REQ;
+                }
+                "Gyro2StateReq" => {
+                    packet.identifier = definitions::GYRO2_STATE_REQ;
+                }
+                "Mag1StateReq" => {
+                    packet.identifier = definitions::MAG1_STATE_REQ;
+                }
+                "Mag2StateReq" => {
+                    packet.identifier = definitions::MAG2_STATE_REQ;
+                }
+                "Baro1StateReq" => {
+                    packet.identifier = definitions::BARO1_STATE_REQ;
+                }
+                "Baro2StateReq" => {
+                    packet.identifier = definitions::BARO2_STATE_REQ;
+                }
+                "FlashMemoryStateReq" => {
+                    packet.identifier = definitions::FLASH_MEMORY_STATE_REQ;
+                }
+                "FlashMemoryConfigSet" => {
+                    packet.identifier = definitions::FLASH_MEMORY_CONFIG_SET;
+                    // TODO: Add payload field into packet
+                    // payload_bytes = 
+                }
+                "GpsTrackingConfigReq" => {
+                    packet.identifier = definitions::GPS_TRACKING_CONFIG_REQ;
+                }
+                "GpsTrackingConfigSet" => {
+                    // Good test cmd for this packet: mosquitto_pub -h 192.168.0.11 -p 1883 -t Node_0/GpsTrackingConfigSet -m '{"chirp_frequency":1, "tracking_enabled":1}'
+                    packet.identifier = definitions::GPS_TRACKING_CONFIG_SET;
+                    // Unpack json payload bytes into struct
+                    // Convert Bytes to Vec<u8>
+                    let payload_byte_str: Vec<u8> = payload.to_vec();
+
+                    // Parse the JSON string into your struct
+                    match serde_json::from_slice::<GpsTrackingConfigSet>(&payload_byte_str) {
+                        Ok(gps_tracking_payload) => {
+                            // Successfully deserialized
+                            // println!("{:?}", gps_tracking_payload);
+                            payload_bytes = bincode::serialize(&gps_tracking_payload).unwrap();
+
+                        }
+                        Err(err) => {
+                            eprintln!("Error deserializing JSON: {}", err);
+                        }
+                    }                 
+                }
+                _ => {
+                    eprintln!("Received packet from an unrecognised topic");
+                }
+            }
+
+            // Serialise packet into byte array
+            encoded_bytes = bincode::serialize(&packet).unwrap();
+            if !payload_bytes.is_empty() {
+                let payload_index_offset = 10;
+                // Insert payload bytes into packet after receiver_id field
+                for (i,b) in payload_bytes.iter().enumerate() {
+                    encoded_bytes.insert(payload_index_offset+i, *b);
+                }
+            }
+            // Calculate CRC
+            let crc_array = self.u8_array_to_u32_array(&encoded_bytes[..&encoded_bytes.len()-4]);
+            let crc32_bytes: [u8; 4] = self.crc_stm32(&crc_array).to_le_bytes();
+            let len = encoded_bytes.len();
+            encoded_bytes[len - 4..].copy_from_slice(&crc32_bytes);
+            println!("Sending payload bytes to LoRa: {:?}", encoded_bytes);
+            return Ok(encoded_bytes);
         }
-        // Calculate CRC
-        let crc_array = self.u8_array_to_u32_array(&encoded_bytes[..&encoded_bytes.len()-4]);
-        let crc32_bytes: [u8; 4] = self.crc_stm32(&crc_array).to_le_bytes();
-        let len = encoded_bytes.len();
-        encoded_bytes[len - 4..].copy_from_slice(&crc32_bytes);
-        println!("Sending payload bytes to LoRa: {:?}", encoded_bytes);
-        return Ok(encoded_bytes);
+        return Ok(vec!());
     }
 
     fn handle_upstream_packet(&mut self, packet: &Vec<u8>) -> Result<(String, String), String> {
@@ -431,10 +454,27 @@ async fn event_loop(mut eventloop: EventLoop, port: Arc<Mutex<Box<dyn SerialPort
     }
 }
 
+async fn subscribe_topics(current_node_ids: Vec<u32>, client: &AsyncClient) {
+    for node_id in &current_node_ids {
+        for downstream_topic in &data_structures::DOWNSTREAM_TOPICS {
+            let topic = format!("Node_{}/{}", node_id, downstream_topic);
+            match client.subscribe(&topic, QoS::AtMostOnce).await {
+                Ok(()) => {
+                    // println!("Subscribed to {}", topic);
+                }
+                Err(err) => {
+                    eprintln!("Error subscribing to {}: {}", topic, err);
+                }
+            }
+            time::sleep(Duration::from_millis(10)).await;
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     /* Node Identification Settings */
-    let current_node_ids = vec![537093200, 0];           // <--- Add hardware IDs of known nodes here!!
+    let current_node_ids = vec![]; 
 
     /* USB COM Port Settings */
     let baud_rate = 115200;
@@ -486,23 +526,18 @@ async fn main() {
     tokio::spawn(event_loop(eventloop, port, async_packet_handler));
 
     // Subscribe to all relevent topics for known node IDs. This allows downstream packets to be forwarded to the nodes
-    for node_id in &current_node_ids {
-        for downstream_topic in &data_structures::DOWNSTREAM_TOPICS {
-            let topic = format!("Node_{}/{}", node_id, downstream_topic);
-            match client.subscribe(&topic, QoS::AtMostOnce).await {
-                Ok(()) => {
-                    // println!("Subscribed to {}", topic);
-                }
-                Err(err) => {
-                    eprintln!("Error subscribing to {}: {}", topic, err);
-                }
-            }
-            time::sleep(Duration::from_millis(10)).await;
+    subscribe_topics(current_node_ids, &client).await;
+    // Subscribe to topic that notifies program of node ids to subscribe to
+    let sub_topic = "current_node_ids";
+    match client.subscribe(sub_topic, QoS::AtMostOnce).await {
+        Ok(()) => {
+            // println!("Subscribed to {}", sub_topic);
+        }
+        Err(err) => {
+            eprintln!("Error subscribing to {}: {}", sub_topic, err);
         }
     }
-
     
-
     loop {
         let mut bytes_available = 0;
         let mut locked_port =  async_port.lock().unwrap();
@@ -535,5 +570,13 @@ async fn main() {
         else {
             drop(locked_port);
         }
+        let mut locked_handler = main_packet_handler.lock().unwrap();
+        // Check if current nodes have changed
+        if locked_handler.update_current_nodes {
+            locked_handler.update_current_nodes = false;
+            subscribe_topics(locked_handler.current_node_ids.clone(), &client).await;
+            // println!("Subscribing to topcis: {:?}", locked_handler.current_node_ids);
+        }
+        drop(locked_handler);
     }
 }
