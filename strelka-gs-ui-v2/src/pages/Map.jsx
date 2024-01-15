@@ -23,9 +23,9 @@ const MapComponent = ({ className }) => {
   // TODO DOCUMENT HOW THIS WORKS PLEASE :)
   const gnss = useStorage(get_mapdata);
 
-  const gnss_longitude = gnss.position ? gnss.position.longitude : 0;
+  const gnss_longitude = gnss.position ? gnss.position.longitude : 144.0161759;
 
-  const gnss_latitude = gnss.position ? gnss.position.latitude : 0;
+  const gnss_latitude = gnss.position ? gnss.position.latitude : -36.482564;
 
   // this is the rocket Icon
   const iss = new Icon({
@@ -41,8 +41,8 @@ const MapComponent = ({ className }) => {
       <div style={style.main_wrapper}>
         <MapContainer
           style={style.map_wrapper}
-          center={[34.519939, -105.870087]}
-          zoom={7}
+          center={[-36.482564, 144.0161759]}
+          zoom={10}
           attributionControl={true}
           zoomControl={true}
           doubleClickZoom={true}
@@ -60,7 +60,7 @@ const MapComponent = ({ className }) => {
           />
 
           <Marker position={[gnss_latitude, gnss_longitude]} icon={iss}>
-            <Popup>💀</Popup>
+            <Popup>I am a rocket 🚀</Popup>
           </Marker>
         </MapContainer>
       </div>
