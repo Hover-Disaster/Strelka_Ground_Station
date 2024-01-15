@@ -1,0 +1,31 @@
+.page-main {
+  margin: 0 var(--side-pad);
+  margin-bottom: var(--top-pad);
+}
+
+/* Text */
+.page-main h1 {
+  text-transform: uppercase;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+/* Specific styles for non-active links*/
+.link {
+  color: white;
+  text-transform: uppercase;
+}
+
+/* Specific styles for active links*/
+.link-active {
+  color: rgb(233, 42, 42);
+  text-transform: uppercase;
+}
+
+/* Footer */
+#footer {
+  font-size: 0.5rem;
+  padding: 0 var(--side-pad) 1rem;
+  font-weight: 200;
+}

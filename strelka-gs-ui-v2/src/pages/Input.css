@@ -1,0 +1,24 @@
+.page-input {
+    margin: 0 var(--side-pad);
+    margin-bottom: var(--top-pad);
+  }
+
+.page-input h1 {
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+  }
+
+.card {
+    background-color: var(--tertiary);
+    padding: 1rem;
+    min-width: 19rem;
+    min-height: 18rem;
+    max-height: 18rem;
+    flex: auto;
+    border-radius: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
