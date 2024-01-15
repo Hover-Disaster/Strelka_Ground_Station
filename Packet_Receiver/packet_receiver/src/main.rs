@@ -187,17 +187,11 @@ impl PacketHandler {
         }
         // Check header bytes
         let identifier = u16::from_le_bytes([packet[0], packet[1]]);
-        let incoming_sender_id = u32::from_le_bytes(packet[2..6].try_into().unwrap());
-        let receiver_id = u32::from_le_bytes(packet[6..10].try_into().unwrap());
+        let protocol_version: u8 = u8::from_le(packet[2]);
+        let incoming_sender_id = u32::from_le_bytes(packet[3..7].try_into().unwrap());
+        let receiver_id = u32::from_le_bytes(packet[7..11].try_into().unwrap());
 
-        // Check if incoming node id is known
-        if !self.current_node_ids.contains(&incoming_sender_id) {
-            // If not, add it to the list
-            self.current_node_ids.push(incoming_sender_id);
-        }
-        if receiver_id != RECEIVER_HARDWARE_ID {
-            return Err("Receiver id does not match receiver hardware id".to_string());
-        }
+        // Check CRCs match
         if let Some(payload_length) = self.get_payload_length(identifier) {
         } else {
             return Err("Unknown message identifier".to_string());
@@ -209,7 +203,20 @@ impl PacketHandler {
         if calcualted_crc32 != received_crc32 {
             return Err("Received CRC32 does not match calcualted CRC32".to_string());
         }
-        return Ok(self.decode_packet(identifier, &packet[10..packet.len() - 4], incoming_sender_id));
+
+        if protocol_version != 0 {
+            return Err("Unknown protocol version".to_string());
+        }
+
+        // Check if incoming node id is known
+        if !self.current_node_ids.contains(&incoming_sender_id) {
+            // If not, add it to the list
+            self.current_node_ids.push(incoming_sender_id);
+        }
+        if receiver_id != RECEIVER_HARDWARE_ID {
+            return Err("Receiver id does not match receiver hardware id".to_string());
+        }
+        return Ok(self.decode_packet(identifier, &packet[11..packet.len() - 4], incoming_sender_id));
 
     }
 
