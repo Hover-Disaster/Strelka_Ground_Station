@@ -2,7 +2,7 @@ use binread::{io::Cursor, BinRead, BinReaderExt};
 use data_structures::{
     Accel1StateRes, Accel2StateRes, Baro1StateRes, Baro2StateRes, BatVolRes, ContinuityRes,
     FireDrogueRes, FireMainRes, FlashStateRes, Gps1StateRes, Gps2StateRes, GpsTrackingConfigRes,
-    GpsTrackingPacket, Gyro1StateRes, Gyro2StateRes, Mag1StateRes, Mag2StateRes, GpsTrackingConfigSet,
+    GpsTrackingPacket, Gyro1StateRes, Gyro2StateRes, Mag1StateRes, Mag2StateRes, GpsTrackingConfigSet,StreamPacketConfig, StreamPacketType0, StreamPacketType1, StreamPacketType2, StreamPacketType3, StreamPacketType4, StreamPacketType5, StreamPacketType6, StreamPacketType7,
 };
 use mqtt::Packet;
 use serde::{Deserialize, Serialize};
@@ -15,6 +15,8 @@ use bytes::{Buf, Bytes};
 use std::sync::{Arc, Mutex};
 
 use serialport::{SerialPortType, UsbPortInfo, ClearBuffer, SerialPort};
+
+use crate::data_structures::StreamPacketConfigSet;
 pub mod data_structures;
 pub mod definitions;
 
@@ -156,6 +158,22 @@ impl PacketHandler {
                         }
                     }                 
                 }
+                "StreamPacketConfigSet" => {
+                    packet.identifier = definitions::STREAM_PKT_CONFIG_SET;
+                    let payload_byte_str: Vec<u8> = payload.to_vec();
+                    // Parse the JSON string into your struct
+                    match serde_json::from_slice::<StreamPacketConfigSet>(&payload_byte_str) {
+                        Ok(stream_pkt_config_payload) => {
+                            // Successfully deserialized
+                            // println!("{:?}", stream_pkt_config_payload);
+                            payload_bytes = bincode::serialize(&stream_pkt_config_payload).unwrap();
+
+                        }
+                        Err(err) => {
+                            eprintln!("Error deserializing JSON: {}", err);
+                        }
+                    }  
+                }
                 _ => {
                     eprintln!("Received packet from an unrecognised topic");
                 }
@@ -271,6 +289,15 @@ impl PacketHandler {
             definitions::GPS_TRACKING_PACKET => {
                 Some(definitions::GPS_TRACKING_PACKET_PKT_LEN as usize)
             }
+            definitions::STREAM_PKT_CONFIG_SET => {Some(definitions::STREAM_PKT_CONFIG_LEN as usize)}
+            definitions::STREAM_PACKET_TYPE_0 => {Some(definitions::STREAM_PACKET_TYPE_0_LEN as usize)}
+            definitions::STREAM_PACKET_TYPE_1 => {Some(definitions::STREAM_PACKET_TYPE_1_LEN as usize)}
+            definitions::STREAM_PACKET_TYPE_2 => {Some(definitions::STREAM_PACKET_TYPE_2_LEN as usize)}
+            definitions::STREAM_PACKET_TYPE_3 => {Some(definitions::STREAM_PACKET_TYPE_3_LEN as usize)}
+            definitions::STREAM_PACKET_TYPE_4 => {Some(definitions::STREAM_PACKET_TYPE_4_LEN as usize)}
+            definitions::STREAM_PACKET_TYPE_5 => {Some(definitions::STREAM_PACKET_TYPE_5_LEN as usize)}
+            definitions::STREAM_PACKET_TYPE_6 => {Some(definitions::STREAM_PACKET_TYPE_6_LEN as usize)}
+            definitions::STREAM_PACKET_TYPE_7 => {Some(definitions::STREAM_PACKET_TYPE_7_LEN as usize)}
 
             _ => None, // Handle unknown identifier
         }
@@ -382,6 +409,60 @@ impl PacketHandler {
                 let gps_tracking_packet: GpsTrackingPacket = bincode::deserialize(payload).unwrap();
                 mqtt_topic = format!("{}/GpsTrackingPacket", mqtt_topic);
                 mqtt_payload = serde_json::to_string(&gps_tracking_packet)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::STREAM_PKT_CONFIG_SET => {
+                let stream_packet_config: StreamPacketConfig = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/StreamPacketConfig", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&stream_packet_config)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::STREAM_PACKET_TYPE_0 => {
+                let stream_packet_0: StreamPacketType0 = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/StreamPacketType0", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&stream_packet_0)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::STREAM_PACKET_TYPE_1 => {
+                let stream_packet_1: StreamPacketType1 = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/StreamPacketType0", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&stream_packet_1)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::STREAM_PACKET_TYPE_2 => {
+                let stream_packet_2: StreamPacketType2 = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/StreamPacketType0", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&stream_packet_2)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::STREAM_PACKET_TYPE_3 => {
+                let stream_packet_3: StreamPacketType3 = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/StreamPacketType0", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&stream_packet_3)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::STREAM_PACKET_TYPE_4 => {
+                let stream_packet_4: StreamPacketType4 = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/StreamPacketType0", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&stream_packet_4)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::STREAM_PACKET_TYPE_5 => {
+                let stream_packet_5: StreamPacketType5 = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/StreamPacketType0", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&stream_packet_5)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::STREAM_PACKET_TYPE_6 => {
+                let stream_packet_6: StreamPacketType6 = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/StreamPacketType0", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&stream_packet_6)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::STREAM_PACKET_TYPE_7 => {
+                let stream_packet_7: StreamPacketType7 = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/StreamPacketType0", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&stream_packet_7)
                     .expect("Failed to serialize to JSON packet");
             }
             _ => {eprintln!("Unable to match identifier: {}", identifier);}

@@ -136,6 +136,86 @@ pub struct GpsTrackingPacket {
     pub satellites_tracked: u8,
 }
 
+#[derive(Deserialize, Serialize, Debug)]
+pub struct StreamPacketConfigSet {
+    pub packet_type_0_enable: u8,
+    pub packet_type_0_stream_frequency: f32,
+    pub packet_type_1_enable: u8,
+    pub packet_type_1_stream_frequency: f32,
+    pub packet_type_2_enable: u8,
+    pub packet_type_2_stream_frequency: f32,
+    pub packet_type_3_enable: u8,
+    pub packet_type_3_stream_frequency: f32,
+    pub packet_type_4_enable: u8,
+    pub packet_type_4_stream_frequency: f32,
+    pub packet_type_5_enable: u8,
+    pub packet_type_5_stream_frequency: f32,
+    pub packet_type_6_enable: u8,
+    pub packet_type_6_stream_frequency: f32,
+    pub packet_type_7_enable: u8,
+    pub packet_type_7_stream_frequency: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct StreamPacketType0 {
+    pub timestamp: u32,
+    pub latitude: f32,
+    pub longitude: f32,
+    pub gps_altitude: f32,
+    pub satellites_tracked: u8,
+    pub lin_acc_x: f32,
+    pub lin_acc_y: f32,
+    pub lin_acc_z: f32,
+    pub lin_vel_x: f32,
+    pub lin_vel_y: f32,
+    pub lin_vel_z: f32,
+    pub baro_altitude: f32,
+    pub ang_vel_x: f32,
+    pub ang_vel_y: f32,
+    pub ang_vel_z: f32,
+    pub quaternion_q1: f32,
+    pub quaternion_q2: f32,
+    pub quaternion_q3: f32,
+    pub quaternion_q4: f32,
+    pub battery_voltage: f32,
+    pub flight_state: u8,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct StreamPacketType1 {
+    // Add fields as needed
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct StreamPacketType2 {
+    // Add fields as needed
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct StreamPacketType3 {
+    // Add fields as needed
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct StreamPacketType4 {
+    // Add fields as needed
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct StreamPacketType5 {
+    // Add fields as needed
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct StreamPacketType6 {
+    // Add fields as needed
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct StreamPacketType7 {
+    // Add fields as needed
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct generic_packet {
     pub(crate) identifier: u16,
@@ -145,4 +225,4 @@ pub struct generic_packet {
     pub(crate) crc32: u32,
 }
 
-pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 18] = ["BatVolReq", "ContinuityReq", "FireDrogueReq", "FireMainReq", "Gps1StateReq", "Gps2StateReq", "Accel1StateReq", "Accel2StateReq", "Gyro1StateReq", "Gyro2StateReq", "Mag1StateReq", "Mag2StateReq", "Baro1StateReq", "Baro2StateReq", "FlashMemoryStateReq", "FlashMemoryConfigSet", "GpsTrackingConfigReq", "GpsTrackingConfigSet"];
+pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 19] = ["BatVolReq", "ContinuityReq", "FireDrogueReq", "FireMainReq", "Gps1StateReq", "Gps2StateReq", "Accel1StateReq", "Accel2StateReq", "Gyro1StateReq", "Gyro2StateReq", "Mag1StateReq", "Mag2StateReq", "Baro1StateReq", "Baro2StateReq", "FlashMemoryStateReq", "FlashMemoryConfigSet", "GpsTrackingConfigReq", "GpsTrackingConfigSet", "StreamPacketConfigSet"];
