@@ -12,7 +12,7 @@ export default function Home() {
     return data.altitude.map((packet) => packet.mission_time / 1000);
   };
   const get_altitude_y = (data) => {
-    return data.altitude.map((packet) => packet.altitude.metres);
+    return data.map((packet) => packet.baro_altitude);    // <---- This is how you unpack the data into an array
   };
 
   // Pressure data callbacks
@@ -22,7 +22,7 @@ export default function Home() {
 
   // Temperature data callbacks
   const get_temp_y = (data) => {
-    return data.altitude.map((packet) => packet.temperature.celsius);
+    return data.temperature.map((packet) => packet.temperature);
   };
 
   // Velocity data callbacks
@@ -36,7 +36,8 @@ export default function Home() {
 
   // Acceleration data callbacks
   const get_acceleration_y = (data) => {
-    return data.mpu9250_imu.map((packet) => packet.accel_y);
+    let accel_magnitude = Math.sqrt(Math.pow(data.lin_acc_x,2)+Math.pow(data.lin_acc_y,2)+Math.pow(data.lin_acc_z,2));
+    return accel_magnitude.map((packet) => packet.accel_y);
   };
 
   const get_acceleration_mission_time = (data) => {

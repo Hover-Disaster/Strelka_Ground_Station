@@ -16,8 +16,8 @@ export function set_resolution(new_res) {
  * @author Matteo Golin <matteo.golin@gmail.com>
  * @returns Telemetry data in JSON format
  */
-export function read_telemetry() {
-  let data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+export function read_telemetry(key) {
+  let data = JSON.parse(localStorage.getItem(key));
   data = data ? data : {};
   return data;
 }
@@ -50,8 +50,10 @@ function shift_array(new_data, prev_buffer) {
  * @param {JSON} recent_data
  */
 export function write_telemetry(recent_data) {
+  let key = recent_data.topic;
+  let payload = recent_data.payload;
   // Get existing data
-  let historic_telem = read_telemetry();
+  let historic_telem = read_telemetry(key);
 
   // What sections to write to
 
@@ -59,19 +61,18 @@ export function write_telemetry(recent_data) {
     return;
   }
 
-  Object.keys(recent_data).forEach((key) => {
-    // Ensure that key exists in historical buffer
-    let buffer;
-    if (historic_telem.hasOwnProperty(key)) {
-      buffer = historic_telem[key]; // Read the last buffer data
-    } else {
-      buffer = [];
-    }
-    shift_array(recent_data[key], buffer); // Add new data to buffer
-    historic_telem[key] = buffer; // Replace historical data with new stuff
-  });
+  // Ensure that key exists in historical buffer
+  let buffer;
+  if (Object.keys(historic_telem).length != 0) {
+    buffer = historic_telem; // Read the last buffer data
+  } else {
+    buffer = [];
+  }
+  shift_array(payload, buffer); // Add new data to buffer
+  
   // Once all historical data has been updated, overwrite localStorage copy
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(historic_telem));
+  console.log("Writing buffer: "+buffer);
+  localStorage.setItem(key, JSON.stringify(buffer));
   window.dispatchEvent(new Event("storage")); // Signal that new data was written
 }
 

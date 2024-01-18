@@ -9,7 +9,7 @@ import { clear_telemetry } from "../../utils/storage";
 
 export default function Navbar({ version, org, status, children }) {
   // Convert connection status
-  const connection = status.rn2483_radio.connected
+  const connection = status.connection_status.connected
     ? "connected"
     : "disconnected";
 

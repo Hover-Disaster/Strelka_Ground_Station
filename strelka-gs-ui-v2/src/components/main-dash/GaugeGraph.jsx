@@ -29,7 +29,6 @@ export default function GaugeGraph({
 }) {
   var x_pos;
   var y_pos;
-
   const x = useStorage(x_cb);
   const y = useStorage(y_cb);
 

@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { read_telemetry } from "../utils/storage";
 
+let currentNodeID = '';
+
+export const setCurrentNodeID = (nodeID) => {
+  currentNodeID = nodeID;
+};
+
+export const getCurrentNodeID = () => {
+  return currentNodeID;
+};
+
 /**
  * Fetches data from the local storage data buffer
  * @author Matteo Golin <matteo.golin@gmail.com>
@@ -12,10 +22,11 @@ export function useStorage(fetch_cb) {
   const [data, setData] = useState([]);
 
   const fetch_cbRef = useRef(fetch_cb);
+  
 
   // Returns the result of the callback function that fetch an array of historical telemetry data points
   const get_x_y = () => {
-    let historical_data = read_telemetry();
+    let historical_data = read_telemetry("Node_" + getCurrentNodeID()+"/StreamPacketType0");
 
     // Never pass null data to mapping functions
     if (historical_data == null) {

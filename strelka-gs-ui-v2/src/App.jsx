@@ -1,5 +1,3 @@
-import "./App.css";
-
 // Hooks
 import { useWebsocket } from "./hooks/useWebsocket";
 import { useMqtt } from "./hooks/useMqtt"
@@ -16,18 +14,13 @@ import Home from "./pages/Home";
 import Input from "./pages/Input";
 import Map from "./pages/Map";
 
-function App() {
-  // Websocket data
-  const [websocketRef, status, replayStatus] = useWebsocket(
-    "ws://localhost:33845/websocket",
-    false
-  );
+import "./App.css";
+var mqttRef, status;
+export { mqttRef, status };
 
-  // // Mqtt data
-  // const [mqttRef, status] = useMqtt(
-  //   'mqtt://localhost:9001',
-  //   true
-  // )
+function App() {
+  // Mqtt data
+  [mqttRef, status] = useMqtt('mqtt://localhost:9001', true);
 
   // Current pageS
   return (
@@ -50,7 +43,7 @@ function App() {
         >Map</NavLink>
       </Navbar>
 
-      <Controls websocketRef={websocketRef} />
+      <Controls />
 
       <Routes>
         <Route path="/" element={<Home />} />

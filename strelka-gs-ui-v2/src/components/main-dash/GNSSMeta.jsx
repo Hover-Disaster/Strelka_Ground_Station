@@ -1,5 +1,7 @@
-import React from "react";
+import { useEffect, useRef, useState } from "react";
 import "./GNSSMeta.css";
+import { read_telemetry } from "../../utils/storage";
+import { getCurrentNodeID } from "../../hooks/useStorage";
 
 // Hooks
 import { useStorage } from "../../hooks/useStorage";
@@ -8,65 +10,89 @@ import { useStorage } from "../../hooks/useStorage";
 import Satellite from "./Satellite";
 
 export default function GNSSMeta({ className }) {
+  let [currentLatitude, setCurrentLatitude] = useState([]);
+  let [currentLongitude, setCurrentLongitude] = useState([]);
+  let [currentAltitude, setCurrentAltitude] = useState([]);
+  let [satsInView, setSatsInView] = useState([]);
+
   const get_metadata = (data) => {
-    return data.gnss_meta[0];
+    let gps_dat = {};
+    gps_dat.lat = data[0].latitude;
+    gps_dat.lng = data[0].longitude;
+    gps_dat.alt = data[0].gps_altitude;
+    gps_dat.sats_in_view = data[0].satellites_tracked;
+    return gps_dat;
   };
 
   // Satellites in use
   const metadata = useStorage(get_metadata);
+  // Only read from metadata if it isn't empy (i.e., isn't an empty array but an object)
+  if (!Array.isArray(metadata)) {
+    // Satellites in view
+    let in_view = metadata.sats_in_view ?? "No satellites in view.";
+    // Uncommenting these below should update the variables however, it causes an infinite render loop
+    // Only update if changed
+    if(in_view != satsInView) {
+      setSatsInView(in_view);
+    }
+    if(metadata.lat != currentLatitude) {
+      setCurrentLatitude(metadata.lat);
+    }
+    if(metadata.lng != currentLongitude) {
+      setCurrentLongitude(metadata.lng);
+    }
+    if(metadata.alt != currentAltitude) {
+      setCurrentAltitude(metadata.alt);
+    }
+  }
 
-  const num_glonass = metadata.glonass_sats_in_use
-    ? metadata.glonass_sats_in_use.length
-    : "Unknown";
-  const num_gps = metadata.glonass_sats_in_use
-    ? metadata.glonass_sats_in_use.length
-    : "Unknown";
 
-  // Satellites in view
-  const in_view = metadata.sats_in_view
-    ? metadata.sats_in_view.map((sat) => (
-        <Satellite
-          type={sat.type}
-          azimuth={sat.azimuth}
-          snr={sat.snr}
-          elevation={sat.elevation}
-          key={sat.id}
-        />
-      ))
-    : "No satellites in view.";
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log("Fetching data...");
+        let current_node_id = getCurrentNodeID();
+        if (current_node_id) {
+          let historical_data = await read_telemetry("Node_" + getCurrentNodeID() + "/StreamPacketType0");
+          console.log("Data fetched:", historical_data);
+          setCurrentLatitude(historical_data[historical_data.length - 1].latitude);
+          setCurrentLongitude(historical_data[historical_data.length - 1].longitude);
+          setCurrentAltitude(historical_data[historical_data.length - 1].gps_altitude);
+          setSatsInView(historical_data[historical_data.length - 1].satellites_tracked);
+        }
+      } catch (error) {
+        console.error("Error fetching telemetry data:", error);
+        // Handle error as needed, e.g., set default values or show an error message
+      }
+    };
 
-  // TODO: Extract last lat and lng from local storage
-  const current_latitude = 0;
-  const current_longitude = 0;
-  const current_gps_altitude = 0;
+    fetchData(); // Call the async function
+
+    // Cleanup function (optional)
+    return () => {
+      console.log("Cleaning up...");
+      // Any cleanup code if needed
+    };
+  }, []); // Empty dependency array ensures this effect runs only once on mount
+
 
   return (
     <div className={className + " gnss"}>
       <div className="metadata">
         <h4>Satellites in View</h4>
-        <div className="in-view">{in_view}</div>
-        <div className="in-use">
-          <p>
-            <strong>Glonass in use: </strong>
-            {num_glonass}
-          </p>
-          <p>
-            <strong>GPS in use: </strong>
-            {num_gps}
-          </p>
-        </div>
+        <div className="in-view">{satsInView}</div>
         <div className="current-latlngalt">
           <p>
             <strong>Latitude: </strong>
-            {current_latitude}
+            {currentLatitude}
           </p>
           <p>
             <strong>Longitude: </strong>
-            {current_longitude}
+            {currentLongitude}
           </p>
           <p>
             <strong>Altitude: </strong>
-            {current_gps_altitude}m
+            {currentAltitude}m
           </p>
         </div>
       </div>
