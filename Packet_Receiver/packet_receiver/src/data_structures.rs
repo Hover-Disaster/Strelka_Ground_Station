@@ -128,7 +128,7 @@ pub struct GpsTrackingConfigSet {
     pub chirp_frequency: f32,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]#[repr(align(1))]
 pub struct GpsTrackingPacket {
     pub latitude: f32,
     pub longitude: f32,
@@ -136,7 +136,7 @@ pub struct GpsTrackingPacket {
     pub satellites_tracked: u8,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]#[repr(align(1))]
 pub struct StreamPacketConfigSet {
     pub packet_type_0_enable: u8,
     pub packet_type_0_stream_frequency: f32,
@@ -157,6 +157,7 @@ pub struct StreamPacketConfigSet {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
 pub struct StreamPacketType0 {
     pub timestamp: u32,
     pub latitude: f32,
@@ -179,6 +180,8 @@ pub struct StreamPacketType0 {
     pub quaternion_q4: f32,
     pub battery_voltage: f32,
     pub flight_state: u8,
+    pub ambient_temperature: f32,
+    pub available_flash_kb: f32,
 }
 
 #[derive(Deserialize, Serialize, Debug)]

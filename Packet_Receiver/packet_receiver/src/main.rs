@@ -2,7 +2,7 @@ use binread::{io::Cursor, BinRead, BinReaderExt};
 use data_structures::{
     Accel1StateRes, Accel2StateRes, Baro1StateRes, Baro2StateRes, BatVolRes, ContinuityRes,
     FireDrogueRes, FireMainRes, FlashStateRes, Gps1StateRes, Gps2StateRes, GpsTrackingConfigRes,
-    GpsTrackingPacket, Gyro1StateRes, Gyro2StateRes, Mag1StateRes, Mag2StateRes, GpsTrackingConfigSet,StreamPacketConfig, StreamPacketType0, StreamPacketType1, StreamPacketType2, StreamPacketType3, StreamPacketType4, StreamPacketType5, StreamPacketType6, StreamPacketType7,
+    GpsTrackingPacket, Gyro1StateRes, Gyro2StateRes, Mag1StateRes, Mag2StateRes, GpsTrackingConfigSet,StreamPacketConfigSet, StreamPacketType0, StreamPacketType1, StreamPacketType2, StreamPacketType3, StreamPacketType4, StreamPacketType5, StreamPacketType6, StreamPacketType7,
 };
 use mqtt::Packet;
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,6 @@ use std::sync::{Arc, Mutex};
 
 use serialport::{SerialPortType, UsbPortInfo, ClearBuffer, SerialPort};
 
-use crate::data_structures::StreamPacketConfigSet;
 pub mod data_structures;
 pub mod definitions;
 
@@ -412,8 +411,8 @@ impl PacketHandler {
                     .expect("Failed to serialize to JSON packet");
             }
             definitions::STREAM_PKT_CONFIG_SET => {
-                let stream_packet_config: StreamPacketConfig = bincode::deserialize(payload).unwrap();
-                mqtt_topic = format!("{}/StreamPacketConfig", mqtt_topic);
+                let stream_packet_config: StreamPacketConfigSet = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/StreamPacketConfigSet", mqtt_topic);
                 mqtt_payload = serde_json::to_string(&stream_packet_config)
                     .expect("Failed to serialize to JSON packet");
             }
