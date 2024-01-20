@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { read_telemetry } from "../utils/storage";
 
 let currentNodeID = '';
+let nodeArray = [];
 
 export const setCurrentNodeID = (nodeID) => {
   currentNodeID = nodeID;
@@ -10,6 +11,14 @@ export const setCurrentNodeID = (nodeID) => {
 export const getCurrentNodeID = () => {
   return currentNodeID;
 };
+
+export const setCurrentNodeArray = (arr) => {
+  nodeArray = arr;
+}
+
+export const getCurrentNodeArray = () => {
+  return nodeArray;
+}
 
 /**
  * Fetches data from the local storage data buffer

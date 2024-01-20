@@ -17,10 +17,10 @@ export default function GNSSMeta({ className }) {
 
   const get_metadata = (data) => {
     let gps_dat = {};
-    gps_dat.lat = data[0].latitude;
-    gps_dat.lng = data[0].longitude;
-    gps_dat.alt = data[0].gps_altitude;
-    gps_dat.sats_in_view = data[0].satellites_tracked;
+    gps_dat.lat = data[data.length - 1].latitude;
+    gps_dat.lng = data[data.length - 1].longitude;
+    gps_dat.alt = data[data.length - 1].gps_altitude;
+    gps_dat.sats_in_view = data[data.length - 1].satellites_tracked;
     return gps_dat;
   };
 

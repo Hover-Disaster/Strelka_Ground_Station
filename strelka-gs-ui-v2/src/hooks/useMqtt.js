@@ -123,7 +123,6 @@ export function useMqtt(mqtt_address, debug = false) {
         mqttClient.on('message', onMessage);
         mqttClient.on('disconnect', onDisconnect);
         mqttClient.on('close', onClose);
-
         return () => {
             mqttRef.current = null;
             mqttClient.end();

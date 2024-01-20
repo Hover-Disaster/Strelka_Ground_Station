@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use rumqttc::{MqttOptions, AsyncClient, QoS, EventLoop, Event, Incoming};
 use serde_json::{to_string, from_slice, from_str};
 use tokio::{task, time};
-use std::time::Duration;
+use std::{time::Duration};
 use std::error::Error;
 use bytes::{Buf, Bytes};
 use std::sync::{Arc, Mutex};

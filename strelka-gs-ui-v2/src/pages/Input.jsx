@@ -1,8 +1,8 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { mqttRef, status } from '../App.jsx';
 import { upstreamTopics } from '../hooks/mqttTopics.js';
 import "./Input.css";
-import { setCurrentNodeID, getCurrentNodeID } from '../hooks/useStorage.js';
+import { setCurrentNodeID, getCurrentNodeID, setCurrentNodeArray, getCurrentNodeArray } from '../hooks/useStorage.js';
 
 export default function Input() {
   const [currentNodeID, setNodeID] = useState('');
@@ -29,6 +29,7 @@ export default function Input() {
 
       // Add the current input value to the array
       setNodeArray([...nodeArray, currentNodeID]);
+      setCurrentNodeArray([...nodeArray, currentNodeID]);
 
       // Subscribe to input value topics
       const topic = "Node_" + currentNodeID;
@@ -37,13 +38,22 @@ export default function Input() {
       upstreamTopics.forEach((subtopic) => {
         let subscribe_topic = topic + "/" + subtopic;
         mqttRef.current.subscribe(subscribe_topic, { qos: 0 });
-        // console.log()
+        // Publish to current_node_ids topic to inform radio interface program of node ids to listen for
+        let payload = {};
+        payload.id_array = [parseInt(currentNodeID,10)];
+        mqttRef.current.publish("current_node_ids", JSON.stringify(payload));
       });
     }
 
     // Clear the input field after adding the value to the array
     setNodeID('')
   };
+
+  useEffect(() => {
+    // Get current node array from externally stored location
+    setNodeArray(getCurrentNodeArray());
+    // setSelectedOption(getCurrentNodeID());
+  });
 
   return (
     <main id="input" className="page-input">
