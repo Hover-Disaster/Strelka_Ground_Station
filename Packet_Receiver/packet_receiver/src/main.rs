@@ -8,7 +8,7 @@ use data_structures::{
     StreamPacketType3, StreamPacketType4, StreamPacketType5, StreamPacketType6, StreamPacketType7,
 };
 use mqtt::Packet;
-use rumqttc::{AsyncClient, Event, EventLoop, Incoming, MqttOptions, QoS};
+use rumqttc::{AsyncClient, Event, EventLoop, Incoming, MqttOptions, QoS, SubscribeFilter};
 use serde::{Deserialize, Serialize};
 use serde_json::{from_slice, from_str, to_string};
 use std::error::Error;
@@ -86,9 +86,10 @@ impl PacketHandler {
             // Construct generic packet struct for easy serialisation to bytes later
             let mut packet = data_structures::generic_packet {
                 identifier: 0x00,
+                protocol_version: 0x00,
                 sender_id: SENDER_HARDWARE_ID,
                 receiver_id: receiver_id,
-                crc32: 0, // Gateway ID
+                crc32: 0,
             };
 
             let mut encoded_bytes = Vec::new();
@@ -189,7 +190,7 @@ impl PacketHandler {
             // Serialise packet into byte array
             encoded_bytes = bincode::serialize(&packet).unwrap();
             if !payload_bytes.is_empty() {
-                let payload_index_offset = 10;
+                let payload_index_offset = 11;
                 // Insert payload bytes into packet after receiver_id field
                 for (i, b) in payload_bytes.iter().enumerate() {
                     encoded_bytes.insert(payload_index_offset + i, *b);
@@ -215,7 +216,6 @@ impl PacketHandler {
         let protocol_version: u8 = u8::from_le(packet[2]);
         let incoming_sender_id = u32::from_le_bytes(packet[3..7].try_into().unwrap());
         let receiver_id = u32::from_le_bytes(packet[7..11].try_into().unwrap());
-
         // Check CRCs match
         if let Some(payload_length) = self.get_payload_length(identifier) {
         } else {
@@ -228,7 +228,6 @@ impl PacketHandler {
         if calcualted_crc32 != received_crc32 {
             return Err("Received CRC32 does not match calcualted CRC32".to_string());
         }
-
         if protocol_version != 0 {
             return Err("Unknown protocol version".to_string());
         }
@@ -585,19 +584,19 @@ async fn event_loop(
 }
 
 async fn subscribe_topics(current_node_ids: Vec<u32>, client: &AsyncClient) {
+    let mut topics = Vec::new();
+
     for node_id in &current_node_ids {
         for downstream_topic in &data_structures::DOWNSTREAM_TOPICS {
             let topic = format!("Node_{}/{}", node_id, downstream_topic);
-            match client.subscribe(&topic, QoS::AtMostOnce).await {
-                Ok(()) => {
-                    println!("Subscribed to {}", topic);
-                }
-                Err(err) => {
-                    eprintln!("Error subscribing to {}: {}", topic, err);
-                }
-            }
-            time::sleep(Duration::from_millis(1)).await;
+            let subscribe_filter = SubscribeFilter::new(topic, QoS::AtMostOnce);
+            topics.push(subscribe_filter);
         }
+    }
+
+    if let Err(err) = client.subscribe_many(topics).await {
+        eprintln!("Error during subscription: {}", err);
+        // Handle the error if needed
     }
 }
 

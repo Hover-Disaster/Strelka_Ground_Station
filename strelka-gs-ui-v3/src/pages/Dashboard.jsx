@@ -53,6 +53,68 @@ const Dashboard = () => {
       console.log("Subscribing to " + subscribe_topic);
     });
   };
+  const sleep = (milliseconds) =>
+    new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+  const handleRefresh = async () => {
+    let delayTime = 1000;
+    console.log(
+      "Getting data from lots of topics: " +
+        "Node_" +
+        systemState.nodeID +
+        "/BatVolReq"
+    );
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/BatVolReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/ContinuityReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Gps1StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Accel1StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Gyro1StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Mag1StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Baro1StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/FlashMemoryStateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/GpsTrackingConfigReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/StreamPacketConfigSet",
+      ""
+    );
+    await sleep(delayTime);
+  };
 
   return (
     <div className="flex flex-wrap">
@@ -76,6 +138,13 @@ const Dashboard = () => {
               </button>
             </div>
           </form>
+          <button
+            className="flex-shrink-0 bg-teal-500 hover:bg-teal-700 border-teal-500 hover:border-teal-700 text-sm border-4 text-white py-1 px-2 rounded"
+            type="button"
+            onClick={handleRefresh}
+          >
+            Submit
+          </button>
         </a>
       </div>
       <GPSCard

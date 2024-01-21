@@ -128,7 +128,8 @@ pub struct GpsTrackingConfigSet {
     pub chirp_frequency: f32,
 }
 
-#[derive(Deserialize, Serialize, Debug)]#[repr(align(1))]
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(align(1))]
 pub struct GpsTrackingPacket {
     pub latitude: f32,
     pub longitude: f32,
@@ -136,23 +137,24 @@ pub struct GpsTrackingPacket {
     pub satellites_tracked: u8,
 }
 
-#[derive(Deserialize, Serialize, Debug)]#[repr(align(1))]
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(align(1))]
 pub struct StreamPacketConfigSet {
-    pub packet_type_0_enable: u8,
+    pub packet_type_0_enable: bool,
     pub packet_type_0_stream_frequency: f32,
-    pub packet_type_1_enable: u8,
+    pub packet_type_1_enable: bool,
     pub packet_type_1_stream_frequency: f32,
-    pub packet_type_2_enable: u8,
+    pub packet_type_2_enable: bool,
     pub packet_type_2_stream_frequency: f32,
-    pub packet_type_3_enable: u8,
+    pub packet_type_3_enable: bool,
     pub packet_type_3_stream_frequency: f32,
-    pub packet_type_4_enable: u8,
+    pub packet_type_4_enable: bool,
     pub packet_type_4_stream_frequency: f32,
-    pub packet_type_5_enable: u8,
+    pub packet_type_5_enable: bool,
     pub packet_type_5_stream_frequency: f32,
-    pub packet_type_6_enable: u8,
+    pub packet_type_6_enable: bool,
     pub packet_type_6_stream_frequency: f32,
-    pub packet_type_7_enable: u8,
+    pub packet_type_7_enable: bool,
     pub packet_type_7_stream_frequency: f32,
 }
 
@@ -222,10 +224,31 @@ pub struct StreamPacketType7 {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct generic_packet {
     pub(crate) identifier: u16,
+    pub(crate) protocol_version: u8,
     pub(crate) sender_id: u32,
     pub(crate) receiver_id: u32,
     // Note* No payload field included. This must be spliced in after serialisation of the struct
     pub(crate) crc32: u32,
 }
 
-pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 19] = ["BatVolReq", "ContinuityReq", "FireDrogueReq", "FireMainReq", "Gps1StateReq", "Gps2StateReq", "Accel1StateReq", "Accel2StateReq", "Gyro1StateReq", "Gyro2StateReq", "Mag1StateReq", "Mag2StateReq", "Baro1StateReq", "Baro2StateReq", "FlashMemoryStateReq", "FlashMemoryConfigSet", "GpsTrackingConfigReq", "GpsTrackingConfigSet", "StreamPacketConfigSet"];
+pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 19] = [
+    "BatVolReq",
+    "ContinuityReq",
+    "FireDrogueReq",
+    "FireMainReq",
+    "Gps1StateReq",
+    "Gps2StateReq",
+    "Accel1StateReq",
+    "Accel2StateReq",
+    "Gyro1StateReq",
+    "Gyro2StateReq",
+    "Mag1StateReq",
+    "Mag2StateReq",
+    "Baro1StateReq",
+    "Baro2StateReq",
+    "FlashMemoryStateReq",
+    "FlashMemoryConfigSet",
+    "GpsTrackingConfigReq",
+    "GpsTrackingConfigSet",
+    "StreamPacketConfigSet",
+];

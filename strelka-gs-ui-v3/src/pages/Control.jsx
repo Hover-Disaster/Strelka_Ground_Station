@@ -25,9 +25,14 @@ const Control = () => {
     // Publish topic to command sensor to enable streaming
     let payload = {};
     payload.packet_type_0_enable = systemState.dataStreamingEnabled;
-    payload.packet_type_0_stream_frequency = parseFloat(
-      systemState.streamFrequency
-    );
+    if (systemState.streamFrequency == null) {
+      payload.packet_type_0_stream_frequency = 1;
+    } else {
+      // If not null, parse and assign the value
+      payload.packet_type_0_stream_frequency = parseFloat(
+        systemState.streamFrequency
+      );
+    }
     payload.packet_type_1_enable = false;
     payload.packet_type_1_stream_frequency = 0;
     payload.packet_type_2_enable = false;
@@ -42,8 +47,6 @@ const Control = () => {
     payload.packet_type_6_stream_frequency = 0;
     payload.packet_type_7_enable = false;
     payload.packet_type_7_stream_frequency = 0;
-    payload.packet_type_8_enable = false;
-    payload.packet_type_8_stream_frequency = 0;
 
     mqttRef.current.publish(
       "Node_" + systemState.nodeID + "/StreamPacketConfigSet",

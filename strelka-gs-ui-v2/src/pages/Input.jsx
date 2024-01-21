@@ -1,14 +1,19 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { mqttRef, status } from '../App.jsx';
-import { upstreamTopics } from '../hooks/mqttTopics.js';
+import React, { createContext, useState, useContext, useEffect } from "react";
+import { mqttRef, status } from "../App.jsx";
+import { upstreamTopics } from "../hooks/mqttTopics.js";
 import "./Input.css";
-import { setCurrentNodeID, getCurrentNodeID, setCurrentNodeArray, getCurrentNodeArray } from '../hooks/useStorage.js';
+import {
+  setCurrentNodeID,
+  getCurrentNodeID,
+  setCurrentNodeArray,
+  getCurrentNodeArray,
+} from "../hooks/useStorage.js";
 
 export default function Input() {
-  const [currentNodeID, setNodeID] = useState('');
+  const [currentNodeID, setNodeID] = useState("");
   const [nodeArray, setNodeArray] = useState([]);
 
-  const [selectedOption, setSelectedOption] = useState('');
+  const [selectedOption, setSelectedOption] = useState("");
 
   const handleSelectChange = (event) => {
     setSelectedOption(event.target.value);
@@ -23,7 +28,7 @@ export default function Input() {
   const submitNodeID = (event) => {
     event.preventDefault();
 
-    if (currentNodeID != '') {
+    if (currentNodeID != "") {
       setSelectedOption("Node_" + currentNodeID);
       // currentNodeID = selectedOption;
 
@@ -40,13 +45,13 @@ export default function Input() {
         mqttRef.current.subscribe(subscribe_topic, { qos: 0 });
         // Publish to current_node_ids topic to inform radio interface program of node ids to listen for
         let payload = {};
-        payload.id_array = [parseInt(currentNodeID,10)];
+        payload.id_array = [parseInt(currentNodeID, 10)];
         mqttRef.current.publish("current_node_ids", JSON.stringify(payload));
       });
     }
 
     // Clear the input field after adding the value to the array
-    setNodeID('')
+    setNodeID("");
   };
 
   useEffect(() => {
@@ -61,8 +66,20 @@ export default function Input() {
         <div className="card">
           <form>
             <h3>Node ID Submission (Decimal)</h3>
-            <input value={currentNodeID} onChange={handleInputChange} className="node-id-input" type="number" placeholder="Input Node ID" />
-            <button className="node-id-submit" type="button" onClick={submitNodeID}>Submit</button>
+            <input
+              value={currentNodeID}
+              onChange={handleInputChange}
+              className="node-id-input"
+              type="number"
+              placeholder="Input Node ID"
+            />
+            <button
+              className="node-id-submit"
+              type="button"
+              onClick={submitNodeID}
+            >
+              Submit
+            </button>
           </form>
         </div>
       </section>
@@ -79,7 +96,11 @@ export default function Input() {
           </div>
           <div>
             <label htmlFor="dropdown">Choose an option:</label>
-            <select id="dropdown" value={selectedOption} onChange={handleSelectChange}>
+            <select
+              id="dropdown"
+              value={selectedOption}
+              onChange={handleSelectChange}
+            >
               <option value="">Select an option</option>
               {nodeArray.map((option, index) => (
                 <option key={index} value={"Node_" + option}>
@@ -88,9 +109,7 @@ export default function Input() {
               ))}
             </select>
 
-            {selectedOption && (
-              <p>You selected: {selectedOption}</p>
-            )}
+            {selectedOption && <p>You selected: {selectedOption}</p>}
           </div>
         </div>
       </div>
