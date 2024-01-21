@@ -52,17 +52,17 @@ const BatteryGauge = ({ value }) => {
             // elastic: true,
           }}
           labels={{
-            valueLabel: { formatTextValue: (value) => value + "ºC" },
+            valueLabel: { formatTextValue: (value) => value + "V" },
             tickLabels: {
               type: "outer",
               valueConfig: {
-                formatTextValue: (value) => value + "ºC",
+                formatTextValue: (value) => value + "V",
                 fontSize: 10,
               },
               ticks: [{ value: 3 }, { value: 3.5 }, { value: 4 }],
             },
           }}
-          value={3.3}
+          value={value}
           minValue={2.5}
           maxValue={4.2}
         />

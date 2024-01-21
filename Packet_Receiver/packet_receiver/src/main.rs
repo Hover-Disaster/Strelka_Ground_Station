@@ -1,20 +1,22 @@
 use binread::{io::Cursor, BinRead, BinReaderExt};
+use bytes::{Buf, Bytes};
 use data_structures::{
     Accel1StateRes, Accel2StateRes, Baro1StateRes, Baro2StateRes, BatVolRes, ContinuityRes,
     FireDrogueRes, FireMainRes, FlashStateRes, Gps1StateRes, Gps2StateRes, GpsTrackingConfigRes,
-    GpsTrackingPacket, Gyro1StateRes, Gyro2StateRes, Mag1StateRes, Mag2StateRes, GpsTrackingConfigSet,StreamPacketConfigSet, StreamPacketType0, StreamPacketType1, StreamPacketType2, StreamPacketType3, StreamPacketType4, StreamPacketType5, StreamPacketType6, StreamPacketType7,
+    GpsTrackingConfigSet, GpsTrackingPacket, Gyro1StateRes, Gyro2StateRes, Mag1StateRes,
+    Mag2StateRes, StreamPacketConfigSet, StreamPacketType0, StreamPacketType1, StreamPacketType2,
+    StreamPacketType3, StreamPacketType4, StreamPacketType5, StreamPacketType6, StreamPacketType7,
 };
 use mqtt::Packet;
+use rumqttc::{AsyncClient, Event, EventLoop, Incoming, MqttOptions, QoS};
 use serde::{Deserialize, Serialize};
-use rumqttc::{MqttOptions, AsyncClient, QoS, EventLoop, Event, Incoming};
-use serde_json::{to_string, from_slice, from_str};
-use tokio::{task, time};
-use std::{time::Duration};
+use serde_json::{from_slice, from_str, to_string};
 use std::error::Error;
-use bytes::{Buf, Bytes};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::{task, time};
 
-use serialport::{SerialPortType, UsbPortInfo, ClearBuffer, SerialPort};
+use serialport::{ClearBuffer, SerialPort, SerialPortType, UsbPortInfo};
 
 pub mod data_structures;
 pub mod definitions;
@@ -43,7 +45,12 @@ impl PacketHandler {
         };
     }
 
-    fn handle_downstream_packet(&mut self, topic: &String, payload: &Bytes) -> Result<Vec<u8>, String> {
+    fn handle_downstream_packet(
+        &mut self,
+        topic: &String,
+        payload: &Bytes,
+    ) -> Result<Vec<u8>, String> {
+        println!("Received packet from {}, {:#?}", topic, payload);
         // Extract receiver_id from topic
         let mut receiver_id = 0;
         // println!("Data received from topic: {:?}", topic.as_str());
@@ -54,7 +61,8 @@ impl PacketHandler {
                 id_array: Vec<u32>,
             }
             let payload_byte_str: Vec<u8> = payload.to_vec();
-            let data_struct:incoming_data = serde_json::from_str(std::str::from_utf8(&payload_byte_str).unwrap()).unwrap();
+            let data_struct: incoming_data =
+                serde_json::from_str(std::str::from_utf8(&payload_byte_str).unwrap()).unwrap();
             let new_ids = data_struct.id_array;
             // Add new ids to current node ids array
             for &new_element in &new_ids {
@@ -63,22 +71,24 @@ impl PacketHandler {
                     self.update_current_nodes = true;
                 }
             }
-        }
-        else {
-            let topic_fields: Vec<&str> = topic.split('/').collect();       // split into [Node_{receiver_id}, subtopic]
+        } else {
+            let topic_fields: Vec<&str> = topic.split('/').collect(); // split into [Node_{receiver_id}, subtopic]
             if let Some(index) = topic_fields[0].find('_') {
                 // Extract all characters after '_' and convert to receiver_id (u32)
                 receiver_id = topic_fields[0][(index + 1)..].parse::<u32>().unwrap();
             } else {
                 // Handle the case where '_' is not found
-                eprintln!("No receiver_id found in incoming topic: {}", topic_fields[0]);
+                eprintln!(
+                    "No receiver_id found in incoming topic: {}",
+                    topic_fields[0]
+                );
             }
             // Construct generic packet struct for easy serialisation to bytes later
             let mut packet = data_structures::generic_packet {
                 identifier: 0x00,
                 sender_id: SENDER_HARDWARE_ID,
                 receiver_id: receiver_id,
-                crc32: 0,    // Gateway ID
+                crc32: 0, // Gateway ID
             };
 
             let mut encoded_bytes = Vec::new();
@@ -132,7 +142,7 @@ impl PacketHandler {
                 "FlashMemoryConfigSet" => {
                     packet.identifier = definitions::FLASH_MEMORY_CONFIG_SET;
                     // TODO: Add payload field into packet
-                    // payload_bytes = 
+                    // payload_bytes =
                 }
                 "GpsTrackingConfigReq" => {
                     packet.identifier = definitions::GPS_TRACKING_CONFIG_REQ;
@@ -150,12 +160,11 @@ impl PacketHandler {
                             // Successfully deserialized
                             // println!("{:?}", gps_tracking_payload);
                             payload_bytes = bincode::serialize(&gps_tracking_payload).unwrap();
-
                         }
                         Err(err) => {
                             eprintln!("Error deserializing JSON: {}", err);
                         }
-                    }                 
+                    }
                 }
                 "StreamPacketConfigSet" => {
                     packet.identifier = definitions::STREAM_PKT_CONFIG_SET;
@@ -166,12 +175,11 @@ impl PacketHandler {
                             // Successfully deserialized
                             // println!("{:?}", stream_pkt_config_payload);
                             payload_bytes = bincode::serialize(&stream_pkt_config_payload).unwrap();
-
                         }
                         Err(err) => {
                             eprintln!("Error deserializing JSON: {}", err);
                         }
-                    }  
+                    }
                 }
                 _ => {
                     eprintln!("Received packet from an unrecognised topic");
@@ -183,19 +191,19 @@ impl PacketHandler {
             if !payload_bytes.is_empty() {
                 let payload_index_offset = 10;
                 // Insert payload bytes into packet after receiver_id field
-                for (i,b) in payload_bytes.iter().enumerate() {
-                    encoded_bytes.insert(payload_index_offset+i, *b);
+                for (i, b) in payload_bytes.iter().enumerate() {
+                    encoded_bytes.insert(payload_index_offset + i, *b);
                 }
             }
             // Calculate CRC
-            let crc_array = self.u8_array_to_u32_array(&encoded_bytes[..&encoded_bytes.len()-4]);
+            let crc_array = self.u8_array_to_u32_array(&encoded_bytes[..&encoded_bytes.len() - 4]);
             let crc32_bytes: [u8; 4] = self.crc_stm32(&crc_array).to_le_bytes();
             let len = encoded_bytes.len();
             encoded_bytes[len - 4..].copy_from_slice(&crc32_bytes);
             println!("Sending payload bytes to LoRa: {:?}", encoded_bytes);
             return Ok(encoded_bytes);
         }
-        return Ok(vec!());
+        return Ok(vec![]);
     }
 
     fn handle_upstream_packet(&mut self, packet: &Vec<u8>) -> Result<(String, String), String> {
@@ -233,8 +241,11 @@ impl PacketHandler {
         if receiver_id != RECEIVER_HARDWARE_ID {
             return Err("Receiver id does not match receiver hardware id".to_string());
         }
-        return Ok(self.decode_packet(identifier, &packet[11..packet.len() - 4], incoming_sender_id));
-
+        return Ok(self.decode_packet(
+            identifier,
+            &packet[11..packet.len() - 4],
+            incoming_sender_id,
+        ));
     }
 
     fn get_payload_length(&mut self, identifier: u16) -> Option<usize> {
@@ -288,21 +299,42 @@ impl PacketHandler {
             definitions::GPS_TRACKING_PACKET => {
                 Some(definitions::GPS_TRACKING_PACKET_PKT_LEN as usize)
             }
-            definitions::STREAM_PKT_CONFIG_SET => {Some(definitions::STREAM_PKT_CONFIG_LEN as usize)}
-            definitions::STREAM_PACKET_TYPE_0 => {Some(definitions::STREAM_PACKET_TYPE_0_LEN as usize)}
-            definitions::STREAM_PACKET_TYPE_1 => {Some(definitions::STREAM_PACKET_TYPE_1_LEN as usize)}
-            definitions::STREAM_PACKET_TYPE_2 => {Some(definitions::STREAM_PACKET_TYPE_2_LEN as usize)}
-            definitions::STREAM_PACKET_TYPE_3 => {Some(definitions::STREAM_PACKET_TYPE_3_LEN as usize)}
-            definitions::STREAM_PACKET_TYPE_4 => {Some(definitions::STREAM_PACKET_TYPE_4_LEN as usize)}
-            definitions::STREAM_PACKET_TYPE_5 => {Some(definitions::STREAM_PACKET_TYPE_5_LEN as usize)}
-            definitions::STREAM_PACKET_TYPE_6 => {Some(definitions::STREAM_PACKET_TYPE_6_LEN as usize)}
-            definitions::STREAM_PACKET_TYPE_7 => {Some(definitions::STREAM_PACKET_TYPE_7_LEN as usize)}
+            definitions::STREAM_PKT_CONFIG_SET => Some(definitions::STREAM_PKT_CONFIG_LEN as usize),
+            definitions::STREAM_PACKET_TYPE_0 => {
+                Some(definitions::STREAM_PACKET_TYPE_0_LEN as usize)
+            }
+            definitions::STREAM_PACKET_TYPE_1 => {
+                Some(definitions::STREAM_PACKET_TYPE_1_LEN as usize)
+            }
+            definitions::STREAM_PACKET_TYPE_2 => {
+                Some(definitions::STREAM_PACKET_TYPE_2_LEN as usize)
+            }
+            definitions::STREAM_PACKET_TYPE_3 => {
+                Some(definitions::STREAM_PACKET_TYPE_3_LEN as usize)
+            }
+            definitions::STREAM_PACKET_TYPE_4 => {
+                Some(definitions::STREAM_PACKET_TYPE_4_LEN as usize)
+            }
+            definitions::STREAM_PACKET_TYPE_5 => {
+                Some(definitions::STREAM_PACKET_TYPE_5_LEN as usize)
+            }
+            definitions::STREAM_PACKET_TYPE_6 => {
+                Some(definitions::STREAM_PACKET_TYPE_6_LEN as usize)
+            }
+            definitions::STREAM_PACKET_TYPE_7 => {
+                Some(definitions::STREAM_PACKET_TYPE_7_LEN as usize)
+            }
 
             _ => None, // Handle unknown identifier
         }
     }
 
-    fn decode_packet(&mut self, identifier: u16, payload: &[u8], incoming_sender_id: u32) -> (String, String) {
+    fn decode_packet(
+        &mut self,
+        identifier: u16,
+        payload: &[u8],
+        incoming_sender_id: u32,
+    ) -> (String, String) {
         let mut mqtt_topic = format!("Node_{}", incoming_sender_id);
         let mut mqtt_payload: String = String::new();
 
@@ -411,7 +443,8 @@ impl PacketHandler {
                     .expect("Failed to serialize to JSON packet");
             }
             definitions::STREAM_PKT_CONFIG_SET => {
-                let stream_packet_config: StreamPacketConfigSet = bincode::deserialize(payload).unwrap();
+                let stream_packet_config: StreamPacketConfigSet =
+                    bincode::deserialize(payload).unwrap();
                 mqtt_topic = format!("{}/StreamPacketConfigSet", mqtt_topic);
                 mqtt_payload = serde_json::to_string(&stream_packet_config)
                     .expect("Failed to serialize to JSON packet");
@@ -464,7 +497,9 @@ impl PacketHandler {
                 mqtt_payload = serde_json::to_string(&stream_packet_7)
                     .expect("Failed to serialize to JSON packet");
             }
-            _ => {eprintln!("Unable to match identifier: {}", identifier);}
+            _ => {
+                eprintln!("Unable to match identifier: {}", identifier);
+            }
         }
 
         println!(
@@ -503,34 +538,42 @@ impl PacketHandler {
     }
 }
 
-async fn event_loop(mut eventloop: EventLoop, port: Arc<Mutex<Box<dyn SerialPort>>>, packet_handler: Arc<Mutex<PacketHandler>>) {
+async fn event_loop(
+    mut eventloop: EventLoop,
+    port: Arc<Mutex<Box<dyn SerialPort>>>,
+    packet_handler: Arc<Mutex<PacketHandler>>,
+) {
     loop {
         match eventloop.poll().await {
             Ok(event) => {
                 match &event {
                     rumqttc::Event::Incoming(packet) => {
                         match packet {
-                            rumqttc::Packet::Connect(_) => {},
-                            rumqttc::Packet::ConnAck(_) => {},
+                            rumqttc::Packet::Connect(_) => {}
+                            rumqttc::Packet::ConnAck(_) => {}
                             rumqttc::Packet::Publish(incoming_packet) => {
                                 // Take mutex on asynchronous packet_handler struct
                                 let mut locked_handler = packet_handler.lock().unwrap();
-                                match locked_handler.handle_downstream_packet(&incoming_packet.topic, &incoming_packet.payload) {
+                                match locked_handler.handle_downstream_packet(
+                                    &incoming_packet.topic,
+                                    &incoming_packet.payload,
+                                ) {
                                     Ok(encoded_bytes) => {
                                         // TODO: Transmit these encoded bytes over Serialport to the arduino
                                         let mut locked_port = port.lock().unwrap();
-                                        let bytes_written = locked_port.write(&encoded_bytes).unwrap();
+                                        let bytes_written =
+                                            locked_port.write(&encoded_bytes).unwrap();
                                         println!("Written {} to USB", bytes_written);
                                     }
                                     Err(err) => {
                                         eprintln!("Error: {}", err);
                                     }
                                 }
-                            },
-                            _ => {},
+                            }
+                            _ => {}
                         }
-                    },
-                    rumqttc::Event::Outgoing(outgoing_packet) => {},
+                    }
+                    rumqttc::Event::Outgoing(outgoing_packet) => {}
                 }
                 // println!("Received = {:?}", event);
             }
@@ -547,13 +590,13 @@ async fn subscribe_topics(current_node_ids: Vec<u32>, client: &AsyncClient) {
             let topic = format!("Node_{}/{}", node_id, downstream_topic);
             match client.subscribe(&topic, QoS::AtMostOnce).await {
                 Ok(()) => {
-                    // println!("Subscribed to {}", topic);
+                    println!("Subscribed to {}", topic);
                 }
                 Err(err) => {
                     eprintln!("Error subscribing to {}: {}", topic, err);
                 }
             }
-            time::sleep(Duration::from_millis(10)).await;
+            time::sleep(Duration::from_millis(1)).await;
         }
     }
 }
@@ -561,7 +604,7 @@ async fn subscribe_topics(current_node_ids: Vec<u32>, client: &AsyncClient) {
 #[tokio::main]
 async fn main() {
     /* Node Identification Settings */
-    let current_node_ids = vec![]; 
+    let current_node_ids = vec![];
 
     /* USB COM Port Settings */
     let baud_rate = 115200;
@@ -571,41 +614,44 @@ async fn main() {
     let broker_address = "localhost";
     let mqtt_port = 1883;
     let client_id = "lora_receiver";
-    let mut async_packet_handler = Arc::new(Mutex::new(PacketHandler::new( &current_node_ids )));
+    let mut async_packet_handler = Arc::new(Mutex::new(PacketHandler::new(&current_node_ids)));
     let main_packet_handler = Arc::clone(&async_packet_handler);
 
     let ports = serialport::available_ports().expect("Error: No COM ports available");
-
-    
 
     // Iterate over the ports and check if any matches the Arduino's characteristics
     for port in &ports {
         match &port.port_type {
             SerialPortType::UsbPort(usb_info) => {
-                if usb_info.manufacturer.clone().unwrap().starts_with("Arduino") {
+                if usb_info
+                    .manufacturer
+                    .clone()
+                    .unwrap()
+                    .starts_with("Arduino")
+                {
                     com_port = port.port_name.clone();
                 }
             }
-            SerialPortType::PciPort => {},
-            SerialPortType::BluetoothPort => {},
-            SerialPortType::Unknown => {},
+            SerialPortType::PciPort => {}
+            SerialPortType::BluetoothPort => {}
+            SerialPortType::Unknown => {}
         }
     }
 
-    
+    println!("Reading from {} port", com_port);
 
-    println!("Reading from {} port", com_port);   
-
-    let mut port = Arc::new(Mutex::new(serialport::new(com_port, baud_rate)
-        .timeout(Duration::from_millis(20))
-        .open()
-        .expect("Failed to open port")));
+    let mut port = Arc::new(Mutex::new(
+        serialport::new(com_port, baud_rate)
+            .timeout(Duration::from_millis(20))
+            .open()
+            .expect("Failed to open port"),
+    ));
     let async_port = Arc::clone(&port);
 
     // Establish MQTT connection
     let mut mqttoptions = MqttOptions::new(client_id, broker_address, mqtt_port);
     mqttoptions.set_keep_alive(Duration::from_secs(5));
-    
+
     let (mut client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
 
     // Spawn async event loop to handle MQTT events
@@ -624,10 +670,10 @@ async fn main() {
             eprintln!("Error subscribing to {}: {}", sub_topic, err);
         }
     }
-    
+
     loop {
         let mut bytes_available = 0;
-        let mut locked_port =  async_port.lock().unwrap();
+        let mut locked_port = async_port.lock().unwrap();
         if locked_port.bytes_to_read().unwrap() > 0 {
             // Wait for all the bytes to slowly arrive over the USB
             let delay_time_ms = time::Duration::from_millis(25);
@@ -644,7 +690,15 @@ async fn main() {
                     let async_client = client.clone();
                     task::spawn(async move {
                         println!("Publishing to topic: {}", mqtt_topic);
-                        async_client.publish(mqtt_topic.clone(), QoS::AtLeastOnce, false, mqtt_payload.clone()).await.unwrap();
+                        async_client
+                            .publish(
+                                mqtt_topic.clone(),
+                                QoS::AtLeastOnce,
+                                false,
+                                mqtt_payload.clone(),
+                            )
+                            .await
+                            .unwrap();
                         time::sleep(Duration::from_millis(100)).await;
                     });
                 }
@@ -652,9 +706,8 @@ async fn main() {
                     eprintln!("Error: {}", err);
                     // TODO: handle the error case
                 }
-            }          
-        }
-        else {
+            }
+        } else {
             drop(locked_port);
         }
         let mut locked_handler = main_packet_handler.lock().unwrap();

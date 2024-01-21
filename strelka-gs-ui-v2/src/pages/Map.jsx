@@ -76,7 +76,7 @@ const style = {
     alignItems: "center",
     justifyContent: "center",
     width: "99vw",
-    height: "100vh",
+    minheight: "100vh",
     margin: "auto",
     textAlign: "center",
     backgroundColor: "#26282d",
