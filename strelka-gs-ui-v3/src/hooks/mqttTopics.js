@@ -20,6 +20,7 @@ export const upstreamTopics = [
     'Baro2StateRes',
     'FlashStateRes',
     'GpsTrackingPacket',
+    'GpsTrackingConfigRes',
     'StreamPacketType0',
     'StreamPacketType1',
     'StreamPacketType2',
@@ -28,6 +29,7 @@ export const upstreamTopics = [
     'StreamPacketType5',
     'StreamPacketType6',
     'StreamPacketType7',
+    "StreamPacketConfigRes",
 ];
 
 export const downstreamTopics = [
@@ -49,7 +51,8 @@ export const downstreamTopics = [
     "FlashMemoryConfigSet", 
     "GpsTrackingConfigReq", 
     "GpsTrackingConfigSet", 
-    "StreamPacketConfigSet"
+    "StreamPacketConfigSet",
+    "StreamPacketConfigReq"
 ]
 
 // Good test script

@@ -118,13 +118,13 @@ pub struct FlashMemoryConfigSet {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct GpsTrackingConfigRes {
     pub gps_good: u8,
-    pub tracking_enabled: u8,
+    pub tracking_enabled: bool,
     pub chirp_frequency: f32,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct GpsTrackingConfigSet {
-    pub tracking_enabled: u8,
+    pub tracking_enabled: bool,
     pub chirp_frequency: f32,
 }
 
@@ -231,7 +231,7 @@ pub struct generic_packet {
     pub(crate) crc32: u32,
 }
 
-pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 19] = [
+pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 20] = [
     "BatVolReq",
     "ContinuityReq",
     "FireDrogueReq",
@@ -251,4 +251,5 @@ pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 19] = [
     "GpsTrackingConfigReq",
     "GpsTrackingConfigSet",
     "StreamPacketConfigSet",
+    "StreamPacketConfigReq",
 ];

@@ -15,6 +15,8 @@ import { useMqtt } from "./hooks/useMqtt";
 var mqttRef, status;
 export { mqttRef, status };
 
+// My strelka id is 537093200
+
 const navigation = [
   { name: "Dashboard", href: "/dashboard", current: true },
   { name: "Configuration", href: "/configuration", current: false },
@@ -71,84 +73,42 @@ export function AppContent() {
         item.current = false;
       }
     }
+    // Refresh variables from local storage
+    const localStorageData = localStorage.getItem("systemState");
+    if (localStorageData) {
+      try {
+        const parsedData = JSON.parse(localStorageData);
+        // Update systemState with the data from local storage
+        updateSystemState(parsedData);
+      } catch (error) {
+        console.error("Error parsing local storage data:", error);
+      }
+    }
   }, [currentPath, navigation]);
-
-  const sleep = (milliseconds) =>
-    new Promise((resolve) => setTimeout(resolve, milliseconds));
-  const handleRefresh = async () => {
-    let delayTime = 1000;
-    console.log(
-      "Getting data from lots of topics: " +
-        "Node_" +
-        systemState.nodeID +
-        "/BatVolReq"
-    );
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/BatVolReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/ContinuityReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Gps1StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Accel1StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Gyro1StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Mag1StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Baro1StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/FlashMemoryStateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/GpsTrackingConfigReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/StreamPacketConfigSet",
-      ""
-    );
-    await sleep(delayTime);
-  };
 
   return (
     <div id="App">
-      <div className="bg-slate-800 p-4">
-        <Disclosure as="nav" className="bg-gray-800">
+      <div className="bg-gray-100 dark:bg-slate-800 p-4">
+        <Disclosure as="nav" className="bg-gray-100 dark:bg-gray-800">
           {({ open }) => (
             <>
               <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
                 <div className="relative flex h-16 items-center justify-between">
                   <div className="flex-shrink-0 items-center">
-                    <img
-                      className="h-16 w-auto"
-                      src="/images/HPR_logo.png"
-                      alt="Strelka Ground Station"
-                    />
+                    <div className="block dark:hidden">
+                      <img
+                        className="h-16 w-auto"
+                        src={"/images/HPR_logo_light.png"}
+                        alt="Strelka Ground Station"
+                      />
+                    </div>
+                    <div className="hidden dark:block">
+                      <img
+                        className="h-16 w-auto"
+                        src={"/images/HPR_logo.png"}
+                        alt="Strelka Ground Station"
+                      />
+                    </div>
                   </div>
 
                   {/* Mobile menu button */}
@@ -184,7 +144,7 @@ export function AppContent() {
                             className={classNames(
                               item.current
                                 ? "bg-gray-900 text-white"
-                                : "text-gray-300 hover:bg-gray-700 hover:text-white",
+                                : "bg-gray-300 dark:bg-gray-600 dark:text-gray-300 text-gray-600 hover:bg-gray-700 hover:text-white",
                               "rounded-md px-3 py-2 text-sm font-medium"
                             )}
                             aria-current={item.current ? "page" : undefined}
@@ -258,25 +218,19 @@ export function AppContent() {
             Data streaming{" "}
             <span
               className={
-                systemState.dataStreamingEnabled
+                systemState.packet_type_0_enable
                   ? "text-green-500"
                   : "text-red-500"
               }
             >
-              {systemState.dataStreamingEnabled ? "enabled" : "disabled"}
+              {systemState.packet_type_0_enable ? "enabled" : "disabled"}
             </span>
           </p>
-          <button
-            className="flex-shrink-0 bg-teal-500 hover:bg-teal-700 border-teal-500 hover:border-teal-700 text-sm border-4 text-white py-1 px-2 rounded"
-            type="button"
-            onClick={handleRefresh}
-          >
-            Refresh
-          </button>
         </div>
         {/* Bottom of header section */}
         <div className="border-b border-gray-300 my-4" />
         <Routes>
+          <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/configuration" element={<Configuration />} />
           <Route path="/control" element={<Control />} />

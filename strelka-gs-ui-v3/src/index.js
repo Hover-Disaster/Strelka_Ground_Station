@@ -5,6 +5,9 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter as Router } from "react-router-dom";
 
+const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+document.documentElement.classList.add(prefersDarkMode ? 'dark' : 'light');
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

@@ -81,7 +81,7 @@ export function Configuration() {
   }
 
   const handleRefresh = async () => {
-    let delayTime = 1000;
+    let delayTime = 500;
     console.log(
       "Getting data from lots of topics: " +
         "Node_" +
@@ -114,6 +114,16 @@ export function Configuration() {
     );
     await sleep(delayTime);
     await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Accel2StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Gyro2StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
       "Node_" + systemState.nodeID + "/Mag1StateReq",
       ""
     );
@@ -134,7 +144,7 @@ export function Configuration() {
     );
     await sleep(delayTime);
     await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/StreamPacketConfigSet",
+      "Node_" + systemState.nodeID + "/StreamPacketConfigReq",
       ""
     );
     await sleep(delayTime);
@@ -150,7 +160,7 @@ export function Configuration() {
           <form class="w-full max-w-sm">
             <div className="flex items-center border-b border-teal-500 py-2">
               <input
-                className="appearance-none bg-transparent border-none w-full text-gray-100 mr-3 py-1 px-2 leading-tight focus:outline-none"
+                className="appearance-none bg-transparent border-none w-full text-gray-600 dark:text-gray-100 mr-3 py-1 px-2 leading-tight focus:outline-none"
                 type="number"
                 placeholder="Enter node ID"
                 aria-label="node-id-input"
@@ -178,7 +188,7 @@ export function Configuration() {
           <form class="w-full max-w-sm">
             <div className="flex items-center border-b border-teal-500 py-2">
               <input
-                className="appearance-none bg-transparent border-none w-full text-gray-100 mr-3 py-1 px-2 leading-tight focus:outline-none"
+                className="appearance-none bg-transparent border-none w-full text-gray-600 dark:text-gray-100 mr-3 py-1 px-2 leading-tight focus:outline-none"
                 type="text"
                 placeholder="Enter MQTT IP address"
                 aria-label="mqtt-ip-input"
@@ -193,6 +203,20 @@ export function Configuration() {
               </button>
             </div>
           </form>
+        </a>
+      </div>
+      <div className="p-6 min-w-0 min-w-full sm:min-w-[10rem] md:min-w-[15rem] lg:min-w-[20rem] xl:min-w-[25rem]">
+        <a className="block max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-500">
+          <p className="flex-shrink-0 flex-grow-0 mr-4 font-normal justify-start dark:text-gray-200">
+            Refresh state from downstream node
+          </p>
+          <button
+            className="flex-shrink-0 bg-teal-500 hover:bg-teal-700 border-teal-500 hover:border-teal-700 text-sm border-4 text-white py-1 px-2 rounded"
+            type="button"
+            onClick={handleRefresh}
+          >
+            Refresh
+          </button>
         </a>
       </div>
     </div>
