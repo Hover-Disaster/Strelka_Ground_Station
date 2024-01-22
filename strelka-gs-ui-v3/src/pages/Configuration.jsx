@@ -10,6 +10,7 @@ export function Configuration() {
   // State to store the input value
   const [nodeID, setNodeID] = useState("");
   const [mqttIP, setMqttIP] = useState("");
+  const [validIPAddressInput, setValidIPAddressInput] = useState(true);
 
   // Event handler to update the state when the user types
   const handleNodeIDInputChange = (e) => {
@@ -44,9 +45,11 @@ export function Configuration() {
       updateSystemState({
         mqttIP: mqttIP.trim(),
       });
+      setValidIPAddressInput(true);
       window.location.reload();
     } else {
       console.log("Invalid ip address input");
+      setValidIPAddressInput(false);
     }
   };
 
@@ -167,7 +170,10 @@ export function Configuration() {
       <div className="p-6 min-w-0 min-w-full sm:min-w-[10rem] md:min-w-[15rem] lg:min-w-[20rem] xl:min-w-[25rem]">
         <a className="block max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-500">
           <p className="flex-shrink-0 flex-grow-0 mr-4 font-normal justify-start dark:text-gray-200">
-            IP address of MQTT server
+            IP address of MQTT server{" "}
+            {!validIPAddressInput && (
+              <span className="text-red-500 italic">Invalid input</span>
+            )}
           </p>
           <form class="w-full max-w-sm">
             <div className="flex items-center border-b border-teal-500 py-2">
