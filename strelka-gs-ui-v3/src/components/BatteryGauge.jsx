@@ -24,7 +24,7 @@ const BatteryGauge = ({ value }) => {
                 color: "#EA4228",
                 showTick: true,
                 tooltip: {
-                  text: "Too low temperature!",
+                  text: "Battery voltage critically low",
                 },
               },
               {
@@ -32,7 +32,7 @@ const BatteryGauge = ({ value }) => {
                 color: "#F5CD19",
                 showTick: true,
                 tooltip: {
-                  text: "Low temperature!",
+                  text: "Battery voltage low",
                 },
               },
               {
@@ -40,7 +40,7 @@ const BatteryGauge = ({ value }) => {
                 color: "#5BE12C",
                 showTick: true,
                 tooltip: {
-                  text: "OK temperature!",
+                  text: "Battery voltage ok",
                 },
               },
             ],

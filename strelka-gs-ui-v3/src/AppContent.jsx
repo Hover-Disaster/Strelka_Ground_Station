@@ -7,6 +7,7 @@ import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import Dashboard from "./pages/Dashboard";
 import Control from "./pages/Control";
 import Map from "./pages/Map";
+import { Configuration } from "./pages/Configuration";
 import ConnectionStatus from "./components/ConnectionStatus";
 import { useSystemState } from "./hooks/systemState";
 import { useMqtt } from "./hooks/useMqtt";
@@ -16,9 +17,9 @@ export { mqttRef, status };
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", current: true },
+  { name: "Configuration", href: "/configuration", current: false },
   { name: "Control", href: "/control", current: false },
   { name: "Map", href: "/map", current: false },
-  { name: "Calendar", href: "#", current: false },
 ];
 
 function classNames(...classes) {
@@ -58,7 +59,9 @@ export function AppContent() {
   const currentPath = location.pathname;
   const { systemState, updateSystemState } = useSystemState();
 
-  [mqttRef, status] = useMqtt("mqtt://localhost:9001", true);
+  // Connect to mqtt address
+  [mqttRef, status] = useMqtt("mqtt://" + systemState.mqttIP + ":9001", true);
+  systemState.mqttConnected = status.status.connection_status.connected;
 
   useEffect(() => {
     for (const item of navigation) {
@@ -69,6 +72,68 @@ export function AppContent() {
       }
     }
   }, [currentPath, navigation]);
+
+  const sleep = (milliseconds) =>
+    new Promise((resolve) => setTimeout(resolve, milliseconds));
+  const handleRefresh = async () => {
+    let delayTime = 1000;
+    console.log(
+      "Getting data from lots of topics: " +
+        "Node_" +
+        systemState.nodeID +
+        "/BatVolReq"
+    );
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/BatVolReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/ContinuityReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Gps1StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Accel1StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Gyro1StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Mag1StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/Baro1StateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/FlashMemoryStateReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/GpsTrackingConfigReq",
+      ""
+    );
+    await sleep(delayTime);
+    await mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/StreamPacketConfigSet",
+      ""
+    );
+    await sleep(delayTime);
+  };
 
   return (
     <div id="App">
@@ -180,29 +245,40 @@ export function AppContent() {
             </>
           )}
         </Disclosure>
-        <p className="ml-6 mt-4 flex-shrink-0 flex-grow-0 mr-4 font-normal text-gray-700 dark:text-gray-400">
-          Last seen{" "}
-          {isNaN(new Date().getTime() - systemState.lastPacketTime)
-            ? "never"
-            : formatLastSeen(
-                (new Date().getTime() - systemState.lastPacketTime) / 1000
-              )}
-        </p>
-        <p className="ml-6 mt-4 flex-shrink-0 flex-grow-0 mr-4 font-normal dark:text-gray-400">
-          Data streaming{" "}
-          <span
-            className={
-              systemState.dataStreamingEnabled
-                ? "text-green-500"
-                : "text-red-500"
-            }
+        <div className="flex flex-row">
+          <p className="ml-6 mt-4 flex-shrink-0 flex-grow-0 mr-4 font-normal text-gray-700 dark:text-gray-400">
+            Last seen{" "}
+            {isNaN(new Date().getTime() - systemState.lastPacketTime)
+              ? "never"
+              : formatLastSeen(
+                  (new Date().getTime() - systemState.lastPacketTime) / 1000
+                )}
+          </p>
+          <p className="ml-6 mt-4 flex-shrink-0 flex-grow-0 mr-4 font-normal dark:text-gray-400">
+            Data streaming{" "}
+            <span
+              className={
+                systemState.dataStreamingEnabled
+                  ? "text-green-500"
+                  : "text-red-500"
+              }
+            >
+              {systemState.dataStreamingEnabled ? "enabled" : "disabled"}
+            </span>
+          </p>
+          <button
+            className="flex-shrink-0 bg-teal-500 hover:bg-teal-700 border-teal-500 hover:border-teal-700 text-sm border-4 text-white py-1 px-2 rounded"
+            type="button"
+            onClick={handleRefresh}
           >
-            {systemState.dataStreamingEnabled ? "enabled" : "disabled"}
-          </span>
-        </p>
-
+            Refresh
+          </button>
+        </div>
+        {/* Bottom of header section */}
+        <div className="border-b border-gray-300 my-4" />
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/configuration" element={<Configuration />} />
           <Route path="/control" element={<Control />} />
           <Route path="/map" element={<Map />} />
         </Routes>

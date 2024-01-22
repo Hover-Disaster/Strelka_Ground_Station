@@ -33,7 +33,7 @@ export function useMqtt(mqtt_address, debug = false) {
     });
 
     const onConnect = () => {
-        console.log('Connected to MQTT broker');
+        console.log('Connected to MQTT broker at ip address: '+systemState.mqttIP);
         updateSystemState({
           mqttConnected: true,
         });
