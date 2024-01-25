@@ -9,43 +9,35 @@ import { mqttRef } from "../AppContent";
     - Confirm state has been updated on rocket, if failed, toggle switch to previous state
 */
 const Control = () => {
-  let [dataStreamingToggleSwitchState, setDataStreamingToggleSwitchState] =
-    useState(true);
   const { systemState, updateSystemState } = useSystemState();
   const [streamFreq, setStreamFreq] = useState();
 
   // Function to handle the toggle event
   const handleDataStreamingSwitchToggle = () => {
-    updateSystemState({
-      packet_type_0_enable: !systemState.packet_type_0_enable,
-      streamFrequency: parseFloat(5),
-    });
-    // Publish topic to command sensor to enable streaming
     let payload = {};
-    payload.packet_type_0_enable = systemState.packet_type_0_enable;
-    if (systemState.streamFrequency == null) {
-      payload.packet_type_0_stream_frequency = 1;
+    if (systemState.stream_packet_type_enabled === 0) {
+      updateSystemState({
+        stream_packet_type_enabled: 100,
+        packet_stream_frequency: 1,
+      });
+      payload.stream_packet_type_enabled = 100;
+    } else {
+      updateSystemState({
+        stream_packet_type_enabled: 0,
+        packet_stream_frequency: 1,
+      });
+      payload.stream_packet_type_enabled = 0;
+    }
+
+    // Publish topic to command sensor to enable streaming
+    if (systemState.packet_stream_frequency == null) {
+      payload.packet_stream_frequency = 1;
     } else {
       // If not null, parse and assign the value
-      payload.packet_type_0_stream_frequency = parseFloat(
-        systemState.streamFrequency
+      payload.packet_stream_frequency = parseFloat(
+        systemState.packet_stream_frequency
       );
     }
-    payload.packet_type_1_enable = false;
-    payload.packet_type_1_stream_frequency = 0;
-    payload.packet_type_2_enable = false;
-    payload.packet_type_2_stream_frequency = 0;
-    payload.packet_type_3_enable = false;
-    payload.packet_type_3_stream_frequency = 0;
-    payload.packet_type_4_enable = false;
-    payload.packet_type_4_stream_frequency = 0;
-    payload.packet_type_5_enable = false;
-    payload.packet_type_5_stream_frequency = 0;
-    payload.packet_type_6_enable = false;
-    payload.packet_type_6_stream_frequency = 0;
-    payload.packet_type_7_enable = false;
-    payload.packet_type_7_stream_frequency = 0;
-
     mqttRef.current.publish(
       "Node_" + systemState.nodeID + "/StreamPacketConfigSet",
       JSON.stringify(payload)
@@ -54,12 +46,16 @@ const Control = () => {
 
   const handleGPSTrackingSwitchToggle = () => {
     updateSystemState({
-      tracking_enabled: !systemState.tracking_enabled,
-      chirpFrequency: 1,
+      gps_tracking_enabled: !systemState.gps_tracking_enabled,
+      gps_tracking_chirp_frequency: 1,
     });
     let payload = {};
-    payload.tracking_enabled = systemState.tracking_enabled;
-    payload.chirp_frequency = 1;
+    if (systemState.gps_tracking_enabled) {
+      payload.gps_tracking_enabled = 1;
+    } else {
+      payload.gps_tracking_enabled = 0;
+    }
+    payload.gps_tracking_chirp_frequency = 1;
     mqttRef.current.publish(
       "Node_" + systemState.nodeID + "/GpsTrackingConfigSet",
       JSON.stringify(payload)
@@ -109,7 +105,7 @@ const Control = () => {
                     type="checkbox"
                     role="switch"
                     id="streamPacketSwitch"
-                    checked={systemState.packet_type_0_enable}
+                    checked={systemState.stream_packet_type_enabled === 0}
                     onChange={handleDataStreamingSwitchToggle}
                   />
                 </td>

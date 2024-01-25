@@ -81,73 +81,12 @@ export function Configuration() {
   }
 
   const handleRefresh = async () => {
-    let delayTime = 500;
-    console.log(
-      "Getting data from lots of topics: " +
-        "Node_" +
-        systemState.nodeID +
-        "/BatVolReq"
-    );
+    let payload = {};
+    payload.state_packet_type = 0;
     await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/BatVolReq",
-      ""
+      "Node_" + systemState.nodeID + "/SystemStatePacketReq",
+      JSON.stringify(payload)
     );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/ContinuityReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Gps1StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Accel1StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Gyro1StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Accel2StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Gyro2StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Mag1StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/Baro1StateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/FlashMemoryStateReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/GpsTrackingConfigReq",
-      ""
-    );
-    await sleep(delayTime);
-    await mqttRef.current.publish(
-      "Node_" + systemState.nodeID + "/StreamPacketConfigReq",
-      ""
-    );
-    await sleep(delayTime);
   };
 
   return (

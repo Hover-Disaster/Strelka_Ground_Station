@@ -1,12 +1,6 @@
 use binread::{io::Cursor, BinRead, BinReaderExt};
 use bytes::{Buf, Bytes};
-use data_structures::{
-    Accel1StateRes, Accel2StateRes, Baro1StateRes, Baro2StateRes, BatVolRes, ContinuityRes,
-    FireDrogueRes, FireMainRes, FlashStateRes, Gps1StateRes, Gps2StateRes, GpsTrackingConfigRes,
-    GpsTrackingConfigSet, GpsTrackingPacket, Gyro1StateRes, Gyro2StateRes, Mag1StateRes,
-    Mag2StateRes, StreamPacketConfigSet, StreamPacketType0, StreamPacketType1, StreamPacketType2,
-    StreamPacketType3, StreamPacketType4, StreamPacketType5, StreamPacketType6, StreamPacketType7,
-};
+use data_structures::*;
 use mqtt::Packet;
 use rumqttc::{AsyncClient, Event, EventLoop, Incoming, MqttOptions, QoS, SubscribeFilter};
 use serde::{Deserialize, Serialize};
@@ -60,14 +54,23 @@ impl PacketHandler {
                 id_array: Vec<u32>,
             }
             let payload_byte_str: Vec<u8> = payload.to_vec();
-            let data_struct: incoming_data =
-                serde_json::from_str(std::str::from_utf8(&payload_byte_str).unwrap()).unwrap();
-            let new_ids = data_struct.id_array;
-            // Add new ids to current node ids array
-            for &new_element in &new_ids {
-                if !self.current_node_ids.contains(&new_element) {
-                    self.current_node_ids.push(new_element);
-                    self.update_current_nodes = true;
+            let data_struct: Result<incoming_data, serde_json::Error> =
+                serde_json::from_str(std::str::from_utf8(&payload_byte_str).unwrap());
+
+            match data_struct {
+                Ok(parsed_data) => {
+                    let new_ids = parsed_data.id_array;
+                    // Add new ids to current node ids array
+                    for &new_element in &new_ids {
+                        if !self.current_node_ids.contains(&new_element) {
+                            self.current_node_ids.push(new_element);
+                            self.update_current_nodes = true;
+                        }
+                    }
+                }
+                Err(err) => {
+                    // Handle the error, e.g., log it or take appropriate action
+                    eprintln!("Error parsing node IDs packet: {}", err);
                 }
             }
         } else {
@@ -142,7 +145,19 @@ impl PacketHandler {
                 "FlashMemoryConfigSet" => {
                     packet.identifier = definitions::FLASH_MEMORY_CONFIG_SET;
                     // TODO: Add payload field into packet
-                    // payload_bytes =
+                    // Convert Bytes to Vec<u8>
+                    let payload_byte_str: Vec<u8> = payload.to_vec();
+
+                    // Parse the JSON string into your struct
+                    match serde_json::from_slice::<FlashMemoryConfigSet>(&payload_byte_str) {
+                        Ok(flash_memory_config_set_payload) => {
+                            payload_bytes =
+                                bincode::serialize(&flash_memory_config_set_payload).unwrap();
+                        }
+                        Err(err) => {
+                            eprintln!("Error deserializing JSON: {}", err);
+                        }
+                    }
                 }
                 "GpsTrackingConfigReq" => {
                     packet.identifier = definitions::GPS_TRACKING_CONFIG_REQ;
@@ -167,14 +182,13 @@ impl PacketHandler {
                     }
                 }
                 "StreamPacketConfigSet" => {
-                    packet.identifier = definitions::STREAM_PKT_CONFIG_SET;
+                    packet.identifier = definitions::STREAM_PACKET_CONFIG_SET;
                     let payload_byte_str: Vec<u8> = payload.to_vec();
                     // Parse the JSON string into your struct
                     match serde_json::from_slice::<StreamPacketConfigSet>(&payload_byte_str) {
-                        Ok(stream_pkt_config_payload) => {
-                            // Successfully deserialized
-                            // println!("{:?}", stream_pkt_config_payload);
-                            payload_bytes = bincode::serialize(&stream_pkt_config_payload).unwrap();
+                        Ok(stream_packet_config_payload) => {
+                            payload_bytes =
+                                bincode::serialize(&stream_packet_config_payload).unwrap();
                         }
                         Err(err) => {
                             eprintln!("Error deserializing JSON: {}", err);
@@ -183,6 +197,55 @@ impl PacketHandler {
                 }
                 "StreamPacketConfigReq" => {
                     packet.identifier = definitions::STREAM_PACKET_CONFIG_REQ;
+                }
+                "HeartBeatConfigPacketSet" => {
+                    packet.identifier = definitions::HEART_BEAT_CONFIG_PACKET_SET;
+                    let payload_byte_str: Vec<u8> = payload.to_vec();
+                    match serde_json::from_slice::<HeartBeatConfigPacketSet>(&payload_byte_str) {
+                        Ok(heart_beat_config_packet_set_payload) => {
+                            payload_bytes =
+                                bincode::serialize(&heart_beat_config_packet_set_payload).unwrap();
+                        }
+                        Err(err) => {
+                            eprintln!("Error deserializing JSON: {}", err);
+                        }
+                    }
+                }
+                "ArmDrogueReq" => {
+                    packet.identifier = definitions::ARM_DROGUE_REQ;
+                    let payload_byte_str: Vec<u8> = payload.to_vec();
+                    match serde_json::from_slice::<ArmDrogueReq>(&payload_byte_str) {
+                        Ok(arm_drogue_req_packet) => {
+                            payload_bytes = bincode::serialize(&arm_drogue_req_packet).unwrap();
+                        }
+                        Err(err) => {
+                            eprintln!("Error deserializing JSON: {}", err);
+                        }
+                    }
+                }
+                "ArmMainReq" => {
+                    packet.identifier = definitions::ARM_MAIN_REQ;
+                    let payload_byte_str: Vec<u8> = payload.to_vec();
+                    match serde_json::from_slice::<ArmMainReq>(&payload_byte_str) {
+                        Ok(arm_main_req_packet) => {
+                            payload_bytes = bincode::serialize(&arm_main_req_packet).unwrap();
+                        }
+                        Err(err) => {
+                            eprintln!("Error deserializing JSON: {}", err);
+                        }
+                    }
+                }
+                "SystemStatePacketReq" => {
+                    packet.identifier = definitions::SYSTEM_STATE_PACKET_REQ;
+                    let payload_byte_str: Vec<u8> = payload.to_vec();
+                    match serde_json::from_slice::<SystemStatePacketReq>(&payload_byte_str) {
+                        Ok(system_state_packet_req) => {
+                            payload_bytes = bincode::serialize(&system_state_packet_req).unwrap();
+                        }
+                        Err(err) => {
+                            eprintln!("Error deserializing JSON: {}", err);
+                        }
+                    }
                 }
                 _ => {
                     eprintln!("Received packet from an unrecognised topic");
@@ -252,56 +315,64 @@ impl PacketHandler {
 
     fn get_payload_length(&mut self, identifier: u16) -> Option<usize> {
         match identifier {
-            definitions::BAT_VOL_REQ => Some(definitions::BAT_VOL_REQ_PKT_LEN as usize),
-            definitions::BAT_VOL_RES => Some(definitions::BAT_VOL_RES_PKT_LEN as usize),
-            definitions::CONTINUITY_REQ => Some(definitions::CONTINUITY_REQ_PKT_LEN as usize),
-            definitions::CONTINUITY_RES => Some(definitions::CONTINUITY_RES_PKT_LEN as usize),
-            definitions::FIRE_DROGUE_REQ => Some(definitions::FIRE_DROGUE_REQ_PKT_LEN as usize),
-            definitions::FIRE_DROGUE_RES => Some(definitions::FIRE_DROGUE_RES_PKT_LEN as usize),
-            definitions::FIRE_MAIN_REQ => Some(definitions::FIRE_MAIN_REQ_PKT_LEN as usize),
-            definitions::FIRE_MAIN_RES => Some(definitions::FIRE_MAIN_RES_PKT_LEN as usize),
-            definitions::GPS1_STATE_REQ => Some(definitions::GPS1_STATE_REQ_PKT_LEN as usize),
-            definitions::GPS1_STATE_RES => Some(definitions::GPS1_STATE_RES_PKT_LEN as usize),
-            definitions::GPS2_STATE_REQ => Some(definitions::GPS2_STATE_REQ_PKT_LEN as usize),
-            definitions::GPS2_STATE_RES => Some(definitions::GPS2_STATE_RES_PKT_LEN as usize),
-            definitions::ACCEL1_STATE_REQ => Some(definitions::ACCEL1_STATE_REQ_PKT_LEN as usize),
-            definitions::ACCEL1_STATE_RES => Some(definitions::ACCEL1_STATE_RES_PKT_LEN as usize),
-            definitions::ACCEL2_STATE_REQ => Some(definitions::ACCEL2_STATE_REQ_PKT_LEN as usize),
-            definitions::ACCEL2_STATE_RES => Some(definitions::ACCEL2_STATE_RES_PKT_LEN as usize),
-            definitions::GYRO1_STATE_REQ => Some(definitions::GYRO1_STATE_REQ_PKT_LEN as usize),
-            definitions::GYRO1_STATE_RES => Some(definitions::GYRO1_STATE_RES_PKT_LEN as usize),
-            definitions::GYRO2_STATE_REQ => Some(definitions::GYRO2_STATE_REQ_PKT_LEN as usize),
-            definitions::GYRO2_STATE_RES => Some(definitions::GYRO2_STATE_RES_PKT_LEN as usize),
-            definitions::MAG1_STATE_REQ => Some(definitions::MAG1_STATE_REQ_PKT_LEN as usize),
-            definitions::MAG1_STATE_RES => Some(definitions::MAG1_STATE_RES_PKT_LEN as usize),
-            definitions::MAG2_STATE_REQ => Some(definitions::MAG2_STATE_REQ_PKT_LEN as usize),
-            definitions::MAG2_STATE_RES => Some(definitions::MAG2_STATE_RES_PKT_LEN as usize),
-            definitions::BARO1_STATE_REQ => Some(definitions::BARO1_STATE_REQ_PKT_LEN as usize),
-            definitions::BARO1_STATE_RES => Some(definitions::BARO1_STATE_RES_PKT_LEN as usize),
-            definitions::BARO2_STATE_REQ => Some(definitions::BARO2_STATE_REQ_PKT_LEN as usize),
-            definitions::BARO2_STATE_RES => Some(definitions::BARO2_STATE_RES_PKT_LEN as usize),
+            definitions::BAT_VOL_REQ => Some(definitions::BAT_VOL_REQ_PACKET_LEN as usize),
+            definitions::BAT_VOL_RES => Some(definitions::BAT_VOL_RES_PACKET_LEN as usize),
+            definitions::CONTINUITY_REQ => Some(definitions::CONTINUITY_REQ_PACKET_LEN as usize),
+            definitions::CONTINUITY_RES => Some(definitions::CONTINUITY_RES_PACKET_LEN as usize),
+            definitions::FIRE_DROGUE_REQ => Some(definitions::FIRE_DROGUE_REQ_PACKET_LEN as usize),
+            definitions::FIRE_DROGUE_RES => Some(definitions::FIRE_DROGUE_RES_PACKET_LEN as usize),
+            definitions::FIRE_MAIN_REQ => Some(definitions::FIRE_MAIN_REQ_PACKET_LEN as usize),
+            definitions::FIRE_MAIN_RES => Some(definitions::FIRE_MAIN_RES_PACKET_LEN as usize),
+            definitions::GPS1_STATE_REQ => Some(definitions::GPS1_STATE_REQ_PACKET_LEN as usize),
+            definitions::GPS1_STATE_RES => Some(definitions::GPS1_STATE_RES_PACKET_LEN as usize),
+            definitions::GPS2_STATE_REQ => Some(definitions::GPS2_STATE_REQ_PACKET_LEN as usize),
+            definitions::GPS2_STATE_RES => Some(definitions::GPS2_STATE_RES_PACKET_LEN as usize),
+            definitions::ACCEL1_STATE_REQ => {
+                Some(definitions::ACCEL1_STATE_REQ_PACKET_LEN as usize)
+            }
+            definitions::ACCEL1_STATE_RES => {
+                Some(definitions::ACCEL1_STATE_RES_PACKET_LEN as usize)
+            }
+            definitions::ACCEL2_STATE_REQ => {
+                Some(definitions::ACCEL2_STATE_REQ_PACKET_LEN as usize)
+            }
+            definitions::ACCEL2_STATE_RES => {
+                Some(definitions::ACCEL2_STATE_RES_PACKET_LEN as usize)
+            }
+            definitions::GYRO1_STATE_REQ => Some(definitions::GYRO1_STATE_REQ_PACKET_LEN as usize),
+            definitions::GYRO1_STATE_RES => Some(definitions::GYRO1_STATE_RES_PACKET_LEN as usize),
+            definitions::GYRO2_STATE_REQ => Some(definitions::GYRO2_STATE_REQ_PACKET_LEN as usize),
+            definitions::GYRO2_STATE_RES => Some(definitions::GYRO2_STATE_RES_PACKET_LEN as usize),
+            definitions::MAG1_STATE_REQ => Some(definitions::MAG1_STATE_REQ_PACKET_LEN as usize),
+            definitions::MAG1_STATE_RES => Some(definitions::MAG1_STATE_RES_PACKET_LEN as usize),
+            definitions::MAG2_STATE_REQ => Some(definitions::MAG2_STATE_REQ_PACKET_LEN as usize),
+            definitions::MAG2_STATE_RES => Some(definitions::MAG2_STATE_RES_PACKET_LEN as usize),
+            definitions::BARO1_STATE_REQ => Some(definitions::BARO1_STATE_REQ_PACKET_LEN as usize),
+            definitions::BARO1_STATE_RES => Some(definitions::BARO1_STATE_RES_PACKET_LEN as usize),
+            definitions::BARO2_STATE_REQ => Some(definitions::BARO2_STATE_REQ_PACKET_LEN as usize),
+            definitions::BARO2_STATE_RES => Some(definitions::BARO2_STATE_RES_PACKET_LEN as usize),
             definitions::FLASH_MEMORY_STATE_REQ => {
-                Some(definitions::FLASH_MEMORY_STATE_REQ_PKT_LEN as usize)
+                Some(definitions::FLASH_MEMORY_STATE_REQ_PACKET_LEN as usize)
             }
             definitions::FLASH_MEMORY_STATE_RES => {
-                Some(definitions::FLASH_MEMORY_STATE_RES_PKT_LEN as usize)
+                Some(definitions::FLASH_MEMORY_STATE_RES_PACKET_LEN as usize)
             }
             definitions::FLASH_MEMORY_CONFIG_SET => {
-                Some(definitions::FLASH_MEMORY_CONFIG_SET_PKT_LEN as usize)
+                Some(definitions::FLASH_MEMORY_CONFIG_SET_PACKET_LEN as usize)
             }
             definitions::GPS_TRACKING_CONFIG_REQ => {
-                Some(definitions::GPS_TRACKING_CONFIG_RES_PKT_LEN as usize)
+                Some(definitions::GPS_TRACKING_CONFIG_RES_PACKET_LEN as usize)
             }
             definitions::GPS_TRACKING_CONFIG_RES => {
-                Some(definitions::GPS_TRACKING_CONFIG_SET_PKT_LEN as usize)
+                Some(definitions::GPS_TRACKING_CONFIG_SET_PACKET_LEN as usize)
             }
             definitions::GPS_TRACKING_CONFIG_SET => {
-                Some(definitions::GPS_TRACKING_PACKET_PKT_LEN as usize)
+                Some(definitions::GPS_TRACKING_CONFIG_SET_PACKET_LEN as usize)
             }
-            definitions::GPS_TRACKING_PACKET => {
-                Some(definitions::GPS_TRACKING_PACKET_PKT_LEN as usize)
+            definitions::GPS_TRACKING_PACKET => Some(definitions::GPS_TRACKING_PACKET_LEN as usize),
+            definitions::STREAM_PACKET_CONFIG_SET => {
+                Some(definitions::STREAM_PACKET_CONFIG_SET_LEN as usize)
             }
-            definitions::STREAM_PKT_CONFIG_SET => Some(definitions::STREAM_PKT_CONFIG_LEN as usize),
             definitions::STREAM_PACKET_TYPE_0 => {
                 Some(definitions::STREAM_PACKET_TYPE_0_LEN as usize)
             }
@@ -326,7 +397,41 @@ impl PacketHandler {
             definitions::STREAM_PACKET_TYPE_7 => {
                 Some(definitions::STREAM_PACKET_TYPE_7_LEN as usize)
             }
-            definitions::STREAM_PKT_CONFIG_RES => Some(definitions::STREAM_PKT_CONFIG_RES as usize),
+            definitions::STREAM_PACKET_CONFIG_RES => {
+                Some(definitions::STREAM_PACKET_CONFIG_RES_LEN as usize)
+            }
+            definitions::HEART_BEAT_PACKET => Some(definitions::HEART_BEAT_PACKET_LEN as usize),
+            definitions::ARM_DROGUE_REQ => Some(definitions::ARM_DROGUE_REQ_LEN as usize),
+            definitions::ARM_MAIN_REQ => Some(definitions::ARM_MAIN_REQ_LEN as usize),
+            definitions::ARM_MAIN_RES => Some(definitions::ARM_MAIN_RES_LEN as usize),
+            definitions::ARM_DROGUE_RES => Some(definitions::ARM_DROGUE_RES_LEN as usize),
+            definitions::SYSTEM_STATE_PACKET_REQ => {
+                Some(definitions::SYSTEM_STATE_PACKET_REQ_LEN as usize)
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_0_RES => {
+                Some(definitions::SYSTEM_STATE_PACKET_TYPE_0_RES_LEN as usize)
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_1_RES => {
+                Some(definitions::SYSTEM_STATE_PACKET_TYPE_1_RES_LEN as usize)
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_2_RES => {
+                Some(definitions::SYSTEM_STATE_PACKET_TYPE_2_RES_LEN as usize)
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_3_RES => {
+                Some(definitions::SYSTEM_STATE_PACKET_TYPE_3_RES_LEN as usize)
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_4_RES => {
+                Some(definitions::SYSTEM_STATE_PACKET_TYPE_4_RES_LEN as usize)
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_5_RES => {
+                Some(definitions::SYSTEM_STATE_PACKET_TYPE_5_RES_LEN as usize)
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_6_RES => {
+                Some(definitions::SYSTEM_STATE_PACKET_TYPE_6_RES_LEN as usize)
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_7_RES => {
+                Some(definitions::SYSTEM_STATE_PACKET_TYPE_7_RES_LEN as usize)
+            }
             _ => None, // Handle unknown identifier
         }
     }
@@ -444,7 +549,7 @@ impl PacketHandler {
                 mqtt_payload = serde_json::to_string(&gps_tracking_packet)
                     .expect("Failed to serialize to JSON packet");
             }
-            definitions::STREAM_PKT_CONFIG_SET => {
+            definitions::STREAM_PACKET_CONFIG_SET => {
                 let stream_packet_config: StreamPacketConfigSet =
                     bincode::deserialize(payload).unwrap();
                 mqtt_topic = format!("{}/StreamPacketConfigSet", mqtt_topic);
@@ -499,11 +604,111 @@ impl PacketHandler {
                 mqtt_payload = serde_json::to_string(&stream_packet_7)
                     .expect("Failed to serialize to JSON packet");
             }
-            definitions::STREAM_PKT_CONFIG_RES => {
+            definitions::STREAM_PACKET_CONFIG_RES => {
                 let stream_packet_config_res: StreamPacketConfigSet =
                     bincode::deserialize(payload).unwrap();
                 mqtt_topic = format!("{}/StreamPacketConfigRes", mqtt_topic);
                 mqtt_payload = serde_json::to_string(&stream_packet_config_res)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::HEART_BEAT_CONFIG_PACKET_SET => {
+                let heat_beat_config_packet_set: HeartBeatConfigPacketSet =
+                    bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/HeartBeatConfigPacketSet", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&heat_beat_config_packet_set)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::HEART_BEAT_PACKET => {
+                let heart_beat_packet: HeartBeatPacket = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/HeartBeatPacket", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&heart_beat_packet)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::ARM_DROGUE_REQ => {
+                let arm_drogue_req: ArmDrogueReq = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/ArmDrogueReq", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&arm_drogue_req)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::ARM_MAIN_REQ => {
+                let arm_main_req: ArmMainReq = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/ArmMainReq", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&arm_main_req)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::ARM_DROGUE_RES => {
+                let arm_drogue_res: ArmDrogueRes = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/ArmDrogueRes", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&arm_drogue_res)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::ARM_MAIN_RES => {
+                let arm_main_res: ArmMainRes = bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/ArmMainRes", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&arm_main_res)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::SYSTEM_STATE_PACKET_REQ => {
+                let system_state_packet_req: SystemStatePacketReq =
+                    bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/SystemStatePacketReq", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&system_state_packet_req)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_0_RES => {
+                let system_state_packet_type_0_res: SystemStatePacketType0Res =
+                    bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/SystemStatePacketType0Res", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&system_state_packet_type_0_res)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_1_RES => {
+                let system_state_packet_type_1_res: SystemStatePacketType1Res =
+                    bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/SystemStatePacketType1Res", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&system_state_packet_type_1_res)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_2_RES => {
+                let system_state_packet_type_2_res: SystemStatePacketType2Res =
+                    bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/SystemStatePacketType2Res", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&system_state_packet_type_2_res)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_3_RES => {
+                let system_state_packet_type_3_res: SystemStatePacketType3Res =
+                    bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/SystemStatePacketType3Res", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&system_state_packet_type_3_res)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_4_RES => {
+                let system_state_packet_type_4_res: SystemStatePacketType4Res =
+                    bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/SystemStatePacketType4Res", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&system_state_packet_type_4_res)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_5_RES => {
+                let system_state_packet_type_5_res: SystemStatePacketType5Res =
+                    bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/SystemStatePacketType5Res", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&system_state_packet_type_5_res)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_6_RES => {
+                let system_state_packet_type_6_res: SystemStatePacketType6Res =
+                    bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/SystemStatePacketType6Res", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&system_state_packet_type_6_res)
+                    .expect("Failed to serialize to JSON packet");
+            }
+            definitions::SYSTEM_STATE_PACKET_TYPE_7_RES => {
+                let system_state_packet_type_7_res: SystemStatePacketType7Res =
+                    bincode::deserialize(payload).unwrap();
+                mqtt_topic = format!("{}/SystemStatePacketType7Res", mqtt_topic);
+                mqtt_payload = serde_json::to_string(&system_state_packet_type_7_res)
                     .expect("Failed to serialize to JSON packet");
             }
             _ => {

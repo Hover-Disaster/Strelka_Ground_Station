@@ -33,11 +33,17 @@ const Dashboard = () => {
   return (
     <div className="flex flex-wrap">
       <GPSCard
-        fix_state={systemState.fix_state}
-        latitude={systemState.latitude?.[systemState.latitude?.length - 1]}
-        longitude={systemState.longitude?.[systemState.longitude?.length - 1]}
-        altitude={systemState.altitude?.[systemState.altitude?.length - 1]}
-        satellites_tracked={systemState.satellites_tracked}
+        fix_state={systemState.gps1_good}
+        latitude={
+          systemState.gps1_latitude?.[systemState.gps1_latitude?.length - 1]
+        }
+        longitude={
+          systemState.gps1_longitude?.[systemState.gps1_longitude?.length - 1]
+        }
+        altitude={
+          systemState.gps1_altitude?.[systemState.gps1_altitude?.length - 1]
+        }
+        satellites_tracked={systemState.gps1_satellites_tracked}
       />
       <LineGraph
         title="Barometric altitude"
@@ -45,7 +51,7 @@ const Dashboard = () => {
         dataArray={dataArray}
       />
       <BatteryGauge
-        value={systemState.batteryVoltage ? systemState.batteryVoltage : 0}
+        value={systemState.battery_voltage ? systemState.battery_voltage : 0}
       />
     </div>
   );

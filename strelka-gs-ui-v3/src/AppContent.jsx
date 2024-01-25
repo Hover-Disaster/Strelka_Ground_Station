@@ -218,12 +218,14 @@ export function AppContent() {
             Data streaming{" "}
             <span
               className={
-                systemState.packet_type_0_enable
+                systemState.stream_packet_type_enabled == 0
                   ? "text-green-500"
                   : "text-red-500"
               }
             >
-              {systemState.packet_type_0_enable ? "enabled" : "disabled"}
+              {systemState.stream_packet_type_enabled == 0
+                ? "enabled"
+                : "disabled"}
             </span>
           </p>
         </div>

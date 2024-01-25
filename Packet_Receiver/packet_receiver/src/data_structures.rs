@@ -1,181 +1,206 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub struct BatVolRes {
     pub battery_voltage: f32,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub struct ContinuityRes {
     pub drogue_ematch_state: u8,
     pub main_ematch_state: u8,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub struct FireDrogueRes {
-    pub result: u8,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct FireMainRes {
-    pub result: u8,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Gps1StateRes {
-    pub gps_good: u8,
-    pub latitude: f32,
-    pub longitude: f32,
-    pub altitude: f32,
-    pub satellites_tracked: u8,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Gps2StateRes {
-    pub gps_good: u8,
-    pub latitude: f32,
-    pub longitude: f32,
-    pub altitude: f32,
-    pub satellites_tracked: u8,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Accel1StateRes {
-    pub acc_good: u8,
-    pub accX: f32,
-    pub accY: f32,
-    pub accZ: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Accel2StateRes {
-    pub acc_good: u8,
-    pub accX: f32,
-    pub accY: f32,
-    pub accZ: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Gyro1StateRes {
-    pub gyro_good: u8,
-    pub gyroX: f32,
-    pub gyroY: f32,
-    pub gyroZ: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Gyro2StateRes {
-    pub gyro_good: u8,
-    pub gyroX: f32,
-    pub gyroY: f32,
-    pub gyroZ: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Mag1StateRes {
-    pub mag_good: u8,
-    pub magX: f32,
-    pub magY: f32,
-    pub magZ: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Mag2StateRes {
-    pub mag_good: u8,
-    pub magX: f32,
-    pub magY: f32,
-    pub magZ: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Baro1StateRes {
-    pub baro_good: u8,
-    pub pressure: f32,
-    pub temperature: f32,
-    pub altitude: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Baro2StateRes {
-    pub baro_good: u8,
-    pub pressure: f32,
-    pub temperature: f32,
-    pub altitude: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct FlashStateRes {
-    pub flash_good: u8,
-    pub write_speed: f32,
-    pub available_space: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct FlashMemoryConfigSet {
-    pub write_speed: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct GpsTrackingConfigRes {
-    pub gps_good: u8,
-    pub tracking_enabled: bool,
-    pub chirp_frequency: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct GpsTrackingConfigSet {
-    pub tracking_enabled: bool,
-    pub chirp_frequency: f32,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-#[repr(align(1))]
-pub struct GpsTrackingPacket {
-    pub latitude: f32,
-    pub longitude: f32,
-    pub altitude: f32,
-    pub satellites_tracked: u8,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-#[repr(align(1))]
-pub struct StreamPacketConfigSet {
-    pub packet_type_0_enable: bool,
-    pub packet_type_0_stream_frequency: f32,
-    pub packet_type_1_enable: bool,
-    pub packet_type_1_stream_frequency: f32,
-    pub packet_type_2_enable: bool,
-    pub packet_type_2_stream_frequency: f32,
-    pub packet_type_3_enable: bool,
-    pub packet_type_3_stream_frequency: f32,
-    pub packet_type_4_enable: bool,
-    pub packet_type_4_stream_frequency: f32,
-    pub packet_type_5_enable: bool,
-    pub packet_type_5_stream_frequency: f32,
-    pub packet_type_6_enable: bool,
-    pub packet_type_6_stream_frequency: f32,
-    pub packet_type_7_enable: bool,
-    pub packet_type_7_stream_frequency: f32,
+    pub fire_drogue_result: u8,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 #[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FireMainRes {
+    pub fire_main_result: u8,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Gps1StateRes {
+    pub gps1_good: u8,
+    pub gps1_latitude: f32,
+    pub gps1_longitude: f32,
+    pub gps1_altitude: f32,
+    pub gps1_satellites_tracked: u8,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Gps2StateRes {
+    pub gps2_good: u8,
+    pub gps2_latitude: f32,
+    pub gps2_longitude: f32,
+    pub gps2_altitude: f32,
+    pub gps2_satellites_tracked: u8,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Accel1StateRes {
+    pub acc1_good: u8,
+    pub acc1X: f32,
+    pub acc1Y: f32,
+    pub acc1Z: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Accel2StateRes {
+    pub acc2_good: u8,
+    pub acc2X: f32,
+    pub acc2Y: f32,
+    pub acc2Z: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Gyro1StateRes {
+    pub gyro1_good: u8,
+    pub gyro1X: f32,
+    pub gyro1Y: f32,
+    pub gyro1Z: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Gyro2StateRes {
+    pub gyro2_good: u8,
+    pub gyro2X: f32,
+    pub gyro2Y: f32,
+    pub gyro2Z: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Mag1StateRes {
+    pub mag1_good: u8,
+    pub mag1X: f32,
+    pub mag1Y: f32,
+    pub mag1Z: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Mag2StateRes {
+    pub mag2_good: u8,
+    pub mag2X: f32,
+    pub mag2Y: f32,
+    pub mag2Z: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Baro1StateRes {
+    pub baro1_good: u8,
+    pub baro1_pressure: f32,
+    pub baro1_temperature: f32,
+    pub baro1_altitude: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Baro2StateRes {
+    pub baro2_good: u8,
+    pub baro2_pressure: f32,
+    pub baro2_temperature: f32,
+    pub baro2_altitude: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FlashStateRes {
+    pub flash_good: u8,
+    pub flash_write_speed: f32,
+    pub available_flash_memory: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FlashMemoryConfigSet {
+    pub flash_logging_enabled: u8,
+    pub flash_write_speed: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct GpsTrackingConfigRes {
+    pub gps_tracking_enabled: u8,
+    pub gps_tracking_chirp_frequency: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct GpsTrackingConfigSet {
+    pub gps_tracking_enabled: u8,
+    pub gps_tracking_chirp_frequency: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct GpsTrackingPacket {
+    pub gps1_latitude: f32,
+    pub gps1_longitude: f32,
+    pub gps1_altitude: f32,
+    pub gps1_satellites_tracked: u8,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct StreamPacketConfigSet {
+    pub stream_packet_type_enabled: u8,
+    pub packet_stream_frequency: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub struct StreamPacketType0 {
     pub timestamp: u32,
-    pub latitude: f32,
-    pub longitude: f32,
-    pub gps_altitude: f32,
-    pub satellites_tracked: u8,
-    pub lin_acc_x: f32,
-    pub lin_acc_y: f32,
-    pub lin_acc_z: f32,
-    pub lin_vel_x: f32,
-    pub lin_vel_y: f32,
-    pub lin_vel_z: f32,
-    pub baro_altitude: f32,
-    pub ang_vel_x: f32,
-    pub ang_vel_y: f32,
-    pub ang_vel_z: f32,
+    pub gps1_latitude: f32,
+    pub gps1_longitude: f32,
+    pub gps1_altitude: f32,
+    pub gps1_satellites_tracked: u8,
+    pub acc1X: f32,
+    pub acc1Y: f32,
+    pub acc1Z: f32,
+    pub velX: f32,
+    pub velY: f32,
+    pub velZ: f32,
+    pub baro1_altitude: f32,
+    pub gyro1X: f32,
+    pub gyro1Y: f32,
+    pub gyro1Z: f32,
     pub quaternion_q1: f32,
     pub quaternion_q2: f32,
     pub quaternion_q3: f32,
@@ -183,43 +208,183 @@ pub struct StreamPacketType0 {
     pub battery_voltage: f32,
     pub flight_state: u8,
     pub ambient_temperature: f32,
-    pub available_flash_kb: f32,
+    pub available_flash_memory: f32,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct StreamPacketType1 {
-    // Add fields as needed
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct StreamPacketType1;
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct StreamPacketType2;
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct StreamPacketType3;
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct StreamPacketType4;
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct StreamPacketType5;
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct StreamPacketType6;
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct StreamPacketType7;
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct StreamPacketConfigRes {
+    pub stream_packet_type_enabled: u8,
+    pub packet_stream_frequency: f32,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct StreamPacketType2 {
-    // Add fields as needed
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct HeartBeatConfigPacketSet {
+    pub heart_beat_enabled: u8,
+    pub heart_beat_chirp_frequency: f32,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct StreamPacketType3 {
-    // Add fields as needed
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct HeartBeatPacket;
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct ArmDrogueReq {
+    pub drogue_arm_state_set: u8,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct StreamPacketType4 {
-    // Add fields as needed
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct ArmMainReq {
+    pub main_arm_state_set: u8,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct StreamPacketType5 {
-    // Add fields as needed
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct ArmMainRes {
+    pub arm_main_state: u8,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct StreamPacketType6 {
-    // Add fields as needed
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct ArmDrogueRes {
+    pub arm_drogue_state: u8,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct StreamPacketType7 {
-    // Add fields as needed
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SystemStatePacketReq {
+    pub state_packet_type: u8,
 }
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SystemStatePacketType0Res {
+    pub timestamp: u32,
+    pub battery_voltage: f32,
+    pub drogue_ematch_state: u8,
+    pub main_ematch_state: u8,
+    pub arm_drogue_state: u8,
+    pub arm_main_state: u8,
+    pub gps1_good: u8,
+    pub gps1_latitude: f32,
+    pub gps1_longitude: f32,
+    pub gps1_satellites_tracked: u8,
+    pub acc1_good: u8,
+    pub acc1X: f32,
+    pub acc1Y: f32,
+    pub acc1Z: f32,
+    pub acc2_good: u8,
+    pub acc2X: f32,
+    pub acc2Y: f32,
+    pub acc2Z: f32,
+    pub gyro1_good: u8,
+    pub gyro1X: f32,
+    pub gyro1Y: f32,
+    pub gyro1Z: f32,
+    pub gyro2_good: u8,
+    pub gyro2X: f32,
+    pub gyro2Y: f32,
+    pub gyro2Z: f32,
+    pub mag1_good: u8,
+    pub mag1X: f32,
+    pub mag1Y: f32,
+    pub mag1Z: f32,
+    pub baro1_good: u8,
+    pub baro1_pressure: f32,
+    pub baro1_temperature: f32,
+    pub baro1_altitude: f32,
+    pub flash_good: u8,
+    pub flash_write_speed: f32,
+    pub available_flash_memory: f32,
+    pub gps_tracking_enabled: u8,
+    pub gps_tracking_chirp_frequency: f32,
+    pub stream_packet_type_enabled: u8,
+    pub packet_stream_frequency: f32,
+    pub heart_beat_enabled: u8,
+    pub heart_beat_chirp_frequency: f32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SystemStatePacketType1Res {}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SystemStatePacketType2Res {}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SystemStatePacketType3Res {}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SystemStatePacketType4Res {}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SystemStatePacketType5Res {}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SystemStatePacketType6Res {}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SystemStatePacketType7Res {}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct generic_packet {
@@ -231,7 +396,7 @@ pub struct generic_packet {
     pub(crate) crc32: u32,
 }
 
-pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 20] = [
+pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 24] = [
     "BatVolReq",
     "ContinuityReq",
     "FireDrogueReq",
@@ -252,4 +417,8 @@ pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 20] = [
     "GpsTrackingConfigSet",
     "StreamPacketConfigSet",
     "StreamPacketConfigReq",
+    "HeartBeatConfigPacketSet",
+    "ArmDrogueReq",
+    "ArmMainReq",
+    "SystemStatePacketReq",
 ];
