@@ -23,8 +23,11 @@ export const SystemStateProvider = ({ children }) => {
   }, [systemState]);
 
   const updateSystemState = (newState) => {
-    setSystemState((prev) => ({ ...prev, ...newState }));
+    setSystemState((prev) => {
+      return { ...prev, ...newState };
+    });
   };
+  
 
   return (
     <SystemStateContext.Provider value={{ systemState, updateSystemState }}>

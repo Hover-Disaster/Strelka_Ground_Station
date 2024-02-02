@@ -156,6 +156,30 @@ export function AppContent() {
                     </div>
                   </div>
                   <p className="ml-6 mt-4 flex-shrink-0 flex-grow-0 mr-4 font-normal justify-start dark:text-gray-400">
+                    <span
+                      ARMED
+                      FOR
+                      LAUNCH
+                      className={
+                        systemState.armed_for_launch == 1
+                          ? "block text-red-500"
+                          : "hidden"
+                      }
+                    ></span>
+                  </p>
+                  <p className="ml-6 mt-4 flex-shrink-0 flex-grow-0 mr-4 font-normal justify-start dark:text-gray-400">
+                    <span
+                      PYRO
+                      ARMED
+                      className={
+                        systemState.arm_main_state == 1 ||
+                        systemState.arm_drogue_state == 1
+                          ? "block text-red-500"
+                          : "hidden"
+                      }
+                    ></span>
+                  </p>
+                  <p className="ml-6 mt-4 flex-shrink-0 flex-grow-0 mr-4 font-normal justify-start dark:text-gray-400">
                     Node ID{" "}
                     <span
                       className={
@@ -226,6 +250,40 @@ export function AppContent() {
               {systemState.stream_packet_type_enabled == 0
                 ? "enabled"
                 : "disabled"}
+            </span>
+          </p>
+          <p className="ml-6 mt-4 flex-shrink-0 flex-grow-0 mr-4 font-normal dark:text-gray-400">
+            Flight state:{" "}
+            <span
+              className={
+                systemState.flight_state === 0
+                  ? "text-green-500"
+                  : systemState.flight_state === 1
+                  ? "text-red-500"
+                  : systemState.flight_state === 2
+                  ? "text-blue-500"
+                  : systemState.flight_state === 3
+                  ? "text-yellow-500"
+                  : systemState.flight_state === 4
+                  ? "text-purple-500"
+                  : systemState.flight_state === 5
+                  ? "text-orange-500"
+                  : "text-gray-500"
+              }
+            >
+              {systemState.flight_state === 0
+                ? "Idle on pad"
+                : systemState.flight_state === 1
+                ? "Launched"
+                : systemState.flight_state === 2
+                ? "Burnout"
+                : systemState.flight_state === 3
+                ? "Drogue chute deploy"
+                : systemState.flight_state === 4
+                ? "Main chute deploy"
+                : systemState.flight_state === 5
+                ? "Landed"
+                : "Unknown State"}
             </span>
           </p>
         </div>

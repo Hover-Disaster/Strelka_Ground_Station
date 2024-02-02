@@ -22,6 +22,9 @@ export default function LineGraph({ title, unit, dataArray }) {
             ],
           }}
           options={{
+            animation: {
+              duration: 0,
+            },
             plugins: {
               title: {
                 display: false,
@@ -47,6 +50,9 @@ export default function LineGraph({ title, unit, dataArray }) {
             },
           }}
           darkOptions={{
+            animation: {
+              duration: 0,
+            },
             plugins: {
               title: {
                 display: true,

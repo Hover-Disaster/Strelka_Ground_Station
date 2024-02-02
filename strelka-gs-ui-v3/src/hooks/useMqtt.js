@@ -64,6 +64,8 @@ export function useMqtt(mqtt_address, debug = false) {
         if(debug) {
             console.log("Received topic: "+topic+"\nData: "+payload);
         }
+
+        let bufferSize = 30; // Adjust the size as needed
         
         // Handle incoming messages
         /*
@@ -75,11 +77,44 @@ export function useMqtt(mqtt_address, debug = false) {
         let subtopic = topic.split('/')[1];
         for (const upstreamTopic of upstreamTopics) {
           if(subtopic == upstreamTopic) {
+            // Add data to systemState field
+            let timestamp = 0;
             for (const [key, value] of Object.entries(json_payload)) {
               updateSystemState({
                 [key]: value,
               });
-            }      
+              if(key=="timestamp") {
+                timestamp = value;
+              }
+            }   
+            if(subtopic == "StreamPacketType0") {
+              // Set data streaming enabled in system state
+              updateSystemState({
+                stream_packet_type_enabled: 0,
+              });
+              // Add time series data to time series arrays
+              for (const [key, value] of Object.entries(json_payload)) {
+                // Pull existing dataArray from systemState
+                let existingDataArray = systemState[key+"_timeseries"] || [];
+                if(!Array.isArray(existingDataArray)) {
+                  existingDataArray = [];
+                }
+            
+                existingDataArray.push({ x: timestamp / 1000, y: value });
+                if(existingDataArray.length > bufferSize) {
+                  existingDataArray.shift();
+                }
+                
+
+                // Ensure the array size does not exceed bufferSize
+                // const finalDataArray = newDataArray.slice(0, bufferSize);
+              
+                // Update systemState
+                updateSystemState({
+                  [key+"_timeseries"]: existingDataArray,
+                });
+              }
+            }
           }
         }
         updateSystemState({
