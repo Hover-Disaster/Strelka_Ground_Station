@@ -94,6 +94,18 @@ const Control = () => {
     }
   };
 
+  const toggleFlashLogging = () => {
+    let payload = {};
+    if (systemState.flash_logging_enabled === 1) {
+      payload.flash_logging_enabled = 0;
+      payload.flash_write_speed = 100;
+      mqttRef.current.publish(
+        "Node_" + systemState.nodeID + "/FireMainReq",
+        JSON.stringify(payload)
+      );
+    }
+  };
+
   return (
     <div className="p-6 min-w-0 min-w-full sm:min-w-[10rem] md:min-w-[15rem] lg:min-w-[20rem] xl:min-w-[25rem]">
       <a className="block max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-700 dark:border-gray-600 ">
@@ -232,6 +244,25 @@ const Control = () => {
               FIRE MAIN
             </button>
           </div>
+        </a>
+      </div>
+      <div className="p-6 min-w-0 min-w-full sm:min-w-[10rem] md:min-w-[15rem] lg:min-w-[20rem] xl:min-w-[25rem]">
+        <a className="block max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-700 dark:border-gray-600 ">
+          <p className="flex-shrink-0 flex-grow-0 mr-4 font-normal text-gray-700 dark:text-gray-400">
+            <b>Flash Memory</b>
+            <div style={{ marginLeft: "100px" }}></div>
+            <button
+              className={`flex-shrink-0 border-4 text-sm py-1 px-2 rounded ${
+                systemState.flash_logging_enabled === 0
+                  ? "bg-green-500 hover:bg-green-700 border-green-500 hover:border-green-700 text-white"
+                  : "bg-red-500 hover:bg-red-700 border-red-500 hover:border-red-700 text-white"
+              }`}
+              type="button"
+              onClick={toggleFlashLogging}
+            >
+              {systemState.flash_logging_enabled === 0 ? "Enabled" : "Disable"}
+            </button>
+          </p>
         </a>
       </div>
     </div>

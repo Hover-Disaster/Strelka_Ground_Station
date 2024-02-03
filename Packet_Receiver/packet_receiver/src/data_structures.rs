@@ -349,6 +349,8 @@ pub struct SystemStatePacketType0Res {
     pub packet_stream_frequency: f32,
     pub heart_beat_enabled: u8,
     pub heart_beat_chirp_frequency: f32,
+    pub flash_logging_enabled: u8,
+    pub flight_state: u8,
 }
 
 #[derive(Deserialize, Serialize, Debug)]

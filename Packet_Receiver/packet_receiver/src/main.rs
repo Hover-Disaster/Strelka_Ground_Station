@@ -893,10 +893,18 @@ async fn main() {
             let delay_time_ms = time::Duration::from_millis(25);
             time::sleep(delay_time_ms).await;
 
-            bytes_available = locked_port.bytes_to_read().unwrap();
+            match locked_port.bytes_to_read() {
+                Ok(value) => {
+                    bytes_available = value;
+                }
+                Err(err) => {
+                    eprintln!("Error: {:?}", err);
+                    // Handle the error in an appropriate way, e.g., log it, return an error value, etc.
+                }
+            }
             let mut read_buffer: Vec<u8> = vec![0; bytes_available as usize];
             let bytes_read = locked_port.read_exact(&mut read_buffer).unwrap();
-            println!("Bytes read: {}", bytes_available);
+            // println!("Bytes read: {}", bytes_available);
             // Take mutex on asynchronous packet handler
             let mut locked_handler = main_packet_handler.lock().unwrap();
             match locked_handler.handle_upstream_packet(&read_buffer.to_vec()) {
