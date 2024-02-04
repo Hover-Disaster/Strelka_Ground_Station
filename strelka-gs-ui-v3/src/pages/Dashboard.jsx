@@ -7,6 +7,7 @@ import BatteryGauge from "../components/BatteryGauge";
 import { useSystemState } from "../hooks/systemState";
 import { mqttRef } from "../AppContent";
 import { upstreamTopics } from "../hooks/mqttTopics";
+import RocketRender from "../components/RocketRender";
 
 const Dashboard = () => {
   const { systemState, updateSystemState } = useSystemState();
@@ -99,6 +100,7 @@ const Dashboard = () => {
           </div>
         </a>
       </div>
+      <RocketRender></RocketRender>
     </div>
   );
 };

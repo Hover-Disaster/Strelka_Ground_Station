@@ -17,6 +17,9 @@
     "react-router": "^6.21.3",
     "react-router-dom": "^6.21.3",
     "react-scripts": "5.0.1",
+    "react-three-fiber": "^6.0.13",
+    "three": "^0.161.0",
+    "three-stl-loader": "^1.0.6",
     "tw-elements-react": "^1.0.0-alpha2",
     "web-vitals": "^2.1.4"
   },
