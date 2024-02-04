@@ -30,6 +30,9 @@ const Control = () => {
         systemState.packet_stream_frequency
       );
     }
+    console.log(
+      "Publishing to StreamPacketConfigSet: " + JSON.stringify(payload)
+    );
     mqttRef.current.publish(
       "Node_" + systemState.nodeID + "/StreamPacketConfigSet",
       JSON.stringify(payload)

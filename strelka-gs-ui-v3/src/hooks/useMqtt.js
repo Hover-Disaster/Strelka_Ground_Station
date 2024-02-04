@@ -53,11 +53,11 @@ export function useMqtt(mqtt_address, debug = false) {
             let subscribe_topic = "Node_" + systemState.nodeID + "/" + subtopic;
             mqttRef.current.subscribe(subscribe_topic, { qos: 0 });
             // Publish to current_node_ids topic to inform radio interface program of node ids to listen for
-            let payload = {};
-            payload.id_array = [parseInt(systemState.nodeID)];
-            mqttRef.current.publish("current_node_ids", JSON.stringify(payload));
             console.log("Subscribing to " + subscribe_topic);
           });
+          let payload = {};
+          payload.id_array = [parseInt(systemState.nodeID)];
+          mqttRef.current.publish("current_node_ids", JSON.stringify(payload));
     };
 
     const onMessage = (topic, payload) => {

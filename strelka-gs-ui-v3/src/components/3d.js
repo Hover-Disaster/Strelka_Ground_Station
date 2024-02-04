@@ -12,6 +12,8 @@ function init() {
 
     scene = new THREE.Scene();
 
+    scene.rotation.set(Math.PI / 2, 0, 0);
+
 	// Create an ambient light for overall scene brightness
 	// ambientLight = new THREE.AmbientLight(0xffffff, 0.0);
 	// scene.add(ambientLight);
@@ -70,10 +72,10 @@ function animation(time) {
     const storedState = JSON.parse(localStorage.getItem('systemState'));
     // Rotate the mesh 
     if(typeof mesh !== 'undefined') {
-        mesh.quaternion.x = storedState.quaternion_q1;
-        mesh.quaternion.y = storedState.quaternion_q2;
-        mesh.quaternion.z = storedState.quaternion_q3;
-        mesh.quaternion.w = storedState.quaternion_q4;
+        mesh.quaternion.w = storedState.quaternion_q1;
+        mesh.quaternion.x = storedState.quaternion_q2;
+        mesh.quaternion.y = storedState.quaternion_q3;
+        mesh.quaternion.z = storedState.quaternion_q4;
     }
 	controls.update();
     renderer.render(scene, camera);
@@ -81,16 +83,18 @@ function animation(time) {
 
 // Respond to size changes
 function resize() {
-    const container = renderer.domElement.parentNode;
+    if(typeof renderer !== 'undefined') {
+        const container = renderer.domElement.parentNode;
 
-    if (container) {
-        const width = container.offsetWidth;
-        const height = container.offsetHeight;
-
-        renderer.setSize(width, height);
-
-        camera.aspect = width / height;
-        camera.updateProjectionMatrix();
+        if (container) {
+            const width = container.offsetWidth;
+            const height = container.offsetHeight;
+    
+            renderer.setSize(width, height);
+    
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
     }
 }
 

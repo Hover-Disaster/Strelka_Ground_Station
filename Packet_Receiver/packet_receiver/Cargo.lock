@@ -555,6 +555,7 @@ dependencies = [
  "binread",
  "bytes 1.5.0",
  "mqtt",
+ "parking_lot",
  "rumqttc",
  "serde",
  "serde_derive",

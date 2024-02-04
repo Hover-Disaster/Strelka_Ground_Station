@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{from_slice, from_str, to_string};
 use std::error::Error;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use tokio::time::{sleep, Duration};
 use tokio::{task, time};
 
 use serialport::{ClearBuffer, SerialPort, SerialPortType, UsbPortInfo};
@@ -275,6 +275,7 @@ impl PacketHandler {
 
     fn handle_upstream_packet(&mut self, packet: &Vec<u8>) -> Result<(String, String), String> {
         if packet.len() < MIN_PACKET_SIZE {
+            eprintln!("Bad upstream: {:#?}", packet);
             return Err("Packet incomplete, dropped".to_string());
         }
         // Check header bytes
@@ -716,10 +717,10 @@ impl PacketHandler {
             }
         }
 
-        println!(
-            "Identifier: {}\nTopic: {}\nPayload: {}",
-            identifier, mqtt_topic, mqtt_payload
-        );
+        // println!(
+        //     "Identifier: {}\nTopic: {}\nPayload: {}",
+        //     identifier, mqtt_topic, mqtt_payload
+        // );
 
         return (mqtt_topic, mqtt_payload);
     }
@@ -809,6 +810,8 @@ async fn subscribe_topics(current_node_ids: Vec<u32>, client: &AsyncClient) {
         }
     }
 
+    println!("Subscribing to topics: {:#?}", topics);
+
     if let Err(err) = client.subscribe_many(topics).await {
         eprintln!("Error during subscription: {}", err);
         // Handle the error if needed
@@ -878,7 +881,7 @@ async fn main() {
     let sub_topic = "current_node_ids";
     match client.subscribe(sub_topic, QoS::AtMostOnce).await {
         Ok(()) => {
-            // println!("Subscribed to {}", sub_topic);
+            println!("Subscribed to {}", sub_topic);
         }
         Err(err) => {
             eprintln!("Error subscribing to {}: {}", sub_topic, err);
@@ -890,8 +893,8 @@ async fn main() {
         let mut locked_port = async_port.lock().unwrap();
         if locked_port.bytes_to_read().unwrap() > 0 {
             // Wait for all the bytes to slowly arrive over the USB
-            let delay_time_ms = time::Duration::from_millis(25);
-            time::sleep(delay_time_ms).await;
+            let delay_time_ms = Duration::from_millis(25);
+            sleep(delay_time_ms).await;
 
             match locked_port.bytes_to_read() {
                 Ok(value) => {
@@ -902,6 +905,7 @@ async fn main() {
                     // Handle the error in an appropriate way, e.g., log it, return an error value, etc.
                 }
             }
+            println!("Read {} bytes from usb", bytes_available);
             let mut read_buffer: Vec<u8> = vec![0; bytes_available as usize];
             let bytes_read = locked_port.read_exact(&mut read_buffer).unwrap();
             // println!("Bytes read: {}", bytes_available);
@@ -934,10 +938,15 @@ async fn main() {
         }
         let mut locked_handler = main_packet_handler.lock().unwrap();
         // Check if current nodes have changed
+
+        /* TODO: This seams to be causing some issues with deadlock or something similar. When a packet is received at the same time as mqtt node subscribes */
         if locked_handler.update_current_nodes {
             locked_handler.update_current_nodes = false;
             subscribe_topics(locked_handler.current_node_ids.clone(), &client).await;
-            // println!("Subscribing to topcis: {:?}", locked_handler.current_node_ids);
+            println!(
+                "Subscribing to topcis: {:?}",
+                locked_handler.current_node_ids
+            );
         }
         drop(locked_handler);
     }
