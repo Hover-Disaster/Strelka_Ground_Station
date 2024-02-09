@@ -16,15 +16,9 @@ const Dashboard = () => {
     <div className="flex flex-wrap">
       <GPSCard
         fix_state={systemState.gps1_good}
-        latitude={
-          systemState.gps1_latitude?.[systemState.gps1_latitude?.length - 1]
-        }
-        longitude={
-          systemState.gps1_longitude?.[systemState.gps1_longitude?.length - 1]
-        }
-        altitude={
-          systemState.gps1_altitude?.[systemState.gps1_altitude?.length - 1]
-        }
+        latitude={systemState.gps1_latitude}
+        longitude={systemState.gps1_longitude}
+        altitude={systemState.gps1_altitude}
         satellites_tracked={systemState.gps1_satellites_tracked}
       />
       <LineGraph

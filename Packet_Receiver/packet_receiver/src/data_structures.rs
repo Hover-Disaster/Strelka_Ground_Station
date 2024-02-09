@@ -209,6 +209,7 @@ pub struct StreamPacketType0 {
     pub flight_state: u8,
     pub ambient_temperature: f32,
     pub available_flash_memory: f32,
+    pub gps1_good: u8,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
