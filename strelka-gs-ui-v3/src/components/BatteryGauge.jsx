@@ -20,7 +20,7 @@ const BatteryGauge = ({ value }) => {
             // gradient: true,
             subArcs: [
               {
-                limit: 3.0,
+                limit: 3.6,
                 color: "#EA4228",
                 showTick: true,
                 tooltip: {
@@ -28,7 +28,7 @@ const BatteryGauge = ({ value }) => {
                 },
               },
               {
-                limit: 3.5,
+                limit: 3.7,
                 color: "#F5CD19",
                 showTick: true,
                 tooltip: {
@@ -63,7 +63,7 @@ const BatteryGauge = ({ value }) => {
             },
           }}
           value={value}
-          minValue={2.5}
+          minValue={3.3}
           maxValue={4.2}
         />
       </a>
