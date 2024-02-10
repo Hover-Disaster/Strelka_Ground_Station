@@ -101,12 +101,16 @@ const Control = () => {
     let payload = {};
     if (systemState.flash_logging_enabled === 1) {
       payload.flash_logging_enabled = 0;
-      payload.flash_write_speed = 100;
+      payload.flash_write_speed = 20;
+    }
+    else {
+      payload.flash_logging_enabled = 1;
+      payload.flash_write_speed = 20;
+    }
       mqttRef.current.publish(
-        "Node_" + systemState.nodeID + "/FireMainReq",
+        "Node_" + systemState.nodeID + "/FlashMemoryConfigSet",
         JSON.stringify(payload)
       );
-    }
   };
 
   return (
@@ -263,7 +267,7 @@ const Control = () => {
               type="button"
               onClick={toggleFlashLogging}
             >
-              {systemState.flash_logging_enabled === 0 ? "Enabled" : "Disable"}
+              {systemState.flash_logging_enabled === 0 ? "Enable" : "Disable"}
             </button>
           </p>
         </a>
