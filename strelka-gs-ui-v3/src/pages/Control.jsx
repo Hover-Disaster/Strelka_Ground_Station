@@ -102,15 +102,14 @@ const Control = () => {
     if (systemState.flash_logging_enabled === 1) {
       payload.flash_logging_enabled = 0;
       payload.flash_write_speed = 20;
-    }
-    else {
+    } else {
       payload.flash_logging_enabled = 1;
       payload.flash_write_speed = 20;
     }
-      mqttRef.current.publish(
-        "Node_" + systemState.nodeID + "/FlashMemoryConfigSet",
-        JSON.stringify(payload)
-      );
+    mqttRef.current.publish(
+      "Node_" + systemState.nodeID + "/FlashMemoryConfigSet",
+      JSON.stringify(payload)
+    );
   };
 
   return (
@@ -269,6 +268,9 @@ const Control = () => {
             >
               {systemState.flash_logging_enabled === 0 ? "Enable" : "Disable"}
             </button>
+          </p>
+          <p className="flex-shrink-0 flex-grow-0 mr-4 font-normal text-gray-700 dark:text-gray-400">
+            Available flash: {systemState.available_flash_memory}kB
           </p>
         </a>
       </div>
