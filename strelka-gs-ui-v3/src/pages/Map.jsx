@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { useMap } from "react-leaflet/hooks";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { useSystemState } from "../hooks/systemState";
 
 export const ChangeView = ({ center }) => {
   const map = useMap();
@@ -18,7 +19,12 @@ export const createIcon = (url) => {
 };
 
 const MapLeaflet = ({ center, zoom, region, position }) => {
-  const markerPosition = position;
+  const { systemState, updateSystemState } = useSystemState();
+  let marker_lat =
+    systemState.gps1_latitude !== null ? systemState.gps1_latitude : 0;
+  let marker_lng =
+    systemState.gps1_longitude !== null ? systemState.gps1_longitude : 0;
+
   return (
     <MapContainer
       center={center}
@@ -31,8 +37,11 @@ const MapLeaflet = ({ center, zoom, region, position }) => {
         attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
         url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
       />
-      <Marker position={markerPosition} icon={createIcon("/icon-location.svg")}>
-        <Popup>Hello there, This is {region}</Popup>
+      <Marker
+        position={[marker_lat, marker_lng]}
+        icon={createIcon("/images/icon-location.png")}
+      >
+        <Popup>Rocket {region}</Popup>
       </Marker>
     </MapContainer>
   );

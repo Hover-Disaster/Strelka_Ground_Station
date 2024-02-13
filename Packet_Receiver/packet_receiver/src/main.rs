@@ -247,6 +247,9 @@ impl PacketHandler {
                         }
                     }
                 }
+                "SystemRebootReq" => {
+                    packet.identifier = definitions::SYSTEM_REBOOT_REQ;
+                }
                 _ => {
                     eprintln!("Received packet from an unrecognised topic");
                 }

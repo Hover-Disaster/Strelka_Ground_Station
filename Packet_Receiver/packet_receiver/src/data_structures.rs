@@ -399,7 +399,7 @@ pub struct generic_packet {
     pub(crate) crc32: u32,
 }
 
-pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 24] = [
+pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 25] = [
     "BatVolReq",
     "ContinuityReq",
     "FireDrogueReq",
@@ -424,4 +424,5 @@ pub(crate) static DOWNSTREAM_TOPICS: [&'static str; 24] = [
     "ArmDrogueReq",
     "ArmMainReq",
     "SystemStatePacketReq",
+    "SystemRebootReq",
 ];

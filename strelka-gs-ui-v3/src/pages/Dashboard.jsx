@@ -94,6 +94,127 @@ const Dashboard = () => {
           </div>
         </a>
       </div>
+      <div className="p-6 min-w-0 min-w-full sm:min-w-[10rem] md:min-w-[15rem] lg:min-w-[20rem] xl:min-w-[25rem]">
+        <a className="block max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-700 dark:border-gray-600 ">
+          <p className="font-bold text-xl text-gray-700 dark:text-gray-200">
+            Checklist
+          </p>
+          <div className="flex items-center">
+            <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
+              Main continuity
+            </p>
+            <div className="flex-grow"></div>
+            <div
+              className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                systemState.main_ematch_state === 2
+                  ? "bg-green-500"
+                  : "bg-red-500"
+              }`}
+            ></div>
+          </div>
+          <div className="flex items-center">
+            <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
+              Drogue continuity
+            </p>
+            <div className="flex-grow"></div>
+            <div
+              className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                systemState.drogue_ematch_state === 2
+                  ? "bg-green-500"
+                  : "bg-red-500"
+              }`}
+            ></div>
+          </div>
+          <div className="flex items-center">
+            <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
+              GPS 1 state
+            </p>
+            <div className="flex-grow"></div>
+            <div
+              className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                systemState.gps1_good === 1 ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+          </div>
+          <div className="flex items-center">
+            <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
+              Accelerometer 1 state
+            </p>
+            <div className="flex-grow"></div>
+            <div
+              className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                systemState.acc1_good === 1 ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+          </div>
+          <div className="flex items-center">
+            <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
+              Accelerometer 2 state
+            </p>
+            <div className="flex-grow"></div>
+            <div
+              className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                systemState.acc2_good === 1 ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+          </div>
+          <div className="flex items-center">
+            <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
+              Gyroscope 1 state
+            </p>
+            <div className="flex-grow"></div>
+            <div
+              className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                systemState.gyro1_good === 1 ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+          </div>
+          <div className="flex items-center">
+            <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
+              Gyroscope 2 state
+            </p>
+            <div className="flex-grow"></div>
+            <div
+              className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                systemState.gyro2_good === 1 ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+          </div>
+          <div className="flex items-center">
+            <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
+              Magnetometer 1 state
+            </p>
+            <div className="flex-grow"></div>
+            <div
+              className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                systemState.mag1_good === 1 ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+          </div>
+          <div className="flex items-center">
+            <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
+              Barometer 1 state
+            </p>
+            <div className="flex-grow"></div>
+            <div
+              className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                systemState.baro1_good === 1 ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+          </div>
+          <div className="flex items-center">
+            <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
+              Flash memory state
+            </p>
+            <div className="flex-grow"></div>
+            <div
+              className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                systemState.flash_good === 1 ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+          </div>
+        </a>
+      </div>
       <RocketRender></RocketRender>
     </div>
   );
