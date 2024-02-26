@@ -12,6 +12,48 @@ import RocketRender from "../components/RocketRender";
 const Dashboard = () => {
   const { systemState, updateSystemState } = useSystemState();
 
+  const quaternionToEuler = (quaternion) => {
+    const { x, y, z, w } = quaternion;
+
+    const t0 = 2.0 * (w * x + y * z);
+    const t1 = 1.0 - 2.0 * (x * x + y * y);
+    const roll = Math.atan2(t0, t1);
+
+    const t2 = 2.0 * (w * y - z * x);
+    const pitch = Math.asin(Math.min(Math.max(t2, -1.0), 1.0));
+
+    const t3 = 2.0 * (w * z + x * y);
+    const t4 = 1.0 - 2.0 * (y * y + z * z);
+    const yaw = Math.atan2(t3, t4);
+
+    return {
+      yaw: (yaw * 180.0) / Math.PI,
+      pitch: (pitch * 180.0) / Math.PI,
+      roll: (roll * 180.0) / Math.PI,
+    };
+  };
+
+  const checkVehicleOrientation = (x, y, z, w) => {
+    // Convert quaternion to axis-angle representation
+    const angle = 2 * Math.acos(w);
+    const sinAngle = Math.sin(angle / 2);
+
+    // Axis of rotation
+    const axisX = x / sinAngle;
+    const axisY = y / sinAngle;
+    const axisZ = z / sinAngle;
+
+    // Calculate angle between axis and vertical axis (0, 0, 1)
+    const dotProduct = axisX * 0 + axisY * 0 + axisZ * 1; // Vertical axis is (0, 0, 1)
+    const axisAngle = Math.acos(dotProduct);
+
+    // Convert angle to degrees
+    const degrees = (180 / Math.PI) * axisAngle;
+
+    // Check if the angle is within 30 degrees of vertical
+    return degrees <= 30 || degrees >= 150; // 180 - 30 = 150 for the opposite direction
+  };
+
   return (
     <div className="flex flex-wrap">
       <GPSCard
@@ -99,6 +141,24 @@ const Dashboard = () => {
           <p className="font-bold text-xl text-gray-700 dark:text-gray-200">
             Checklist
           </p>
+          <div className="flex items-center">
+            <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
+              Vehicle orientation
+            </p>
+            <div className="flex-grow"></div>
+            <div
+              className={`w-6 h-6 flex items-center justify-center rounded-full ${
+                checkVehicleOrientation(
+                  systemState.quaternion_q2,
+                  systemState.quaternion_q3,
+                  systemState.quaternion_q4,
+                  systemState.quaternion_q1
+                ) === 1
+                  ? "bg-green-500"
+                  : "bg-red-500"
+              }`}
+            ></div>
+          </div>
           <div className="flex items-center">
             <p className="mr-4 mt-2 text-gray-500 dark:text-gray-400">
               Main continuity

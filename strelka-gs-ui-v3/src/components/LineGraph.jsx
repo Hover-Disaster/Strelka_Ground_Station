@@ -29,6 +29,7 @@ export default function LineGraph({ title, unit, dataArray }) {
               title: {
                 display: false,
                 text: title,
+                color: "#000",
               },
             },
             scales: {
