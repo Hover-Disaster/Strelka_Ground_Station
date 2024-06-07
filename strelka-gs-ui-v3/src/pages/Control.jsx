@@ -40,6 +40,7 @@ const Control = () => {
   };
 
   const handleGPSTrackingSwitchToggle = () => {
+    /*
     let payload = {};
     if (systemState.gps_tracking_enabled === 0) {
       payload.gps_tracking_enabled = 1;
@@ -51,6 +52,7 @@ const Control = () => {
       "Node_" + systemState.nodeID + "/GpsTrackingConfigSet",
       JSON.stringify(payload)
     );
+    */
   };
 
   const toggleArmDrogue = () => {
@@ -101,10 +103,10 @@ const Control = () => {
     let payload = {};
     if (systemState.flash_logging_enabled === 1) {
       payload.flash_logging_enabled = 0;
-      payload.flash_write_speed = 20;
+      payload.flash_write_speed = 100;
     } else {
       payload.flash_logging_enabled = 1;
-      payload.flash_write_speed = 20;
+      payload.flash_write_speed = 100;
     }
     mqttRef.current.publish(
       "Node_" + systemState.nodeID + "/FlashMemoryConfigSet",

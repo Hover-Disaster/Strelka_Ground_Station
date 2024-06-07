@@ -8,6 +8,7 @@ import { useSystemState } from "../hooks/systemState";
 import { mqttRef } from "../AppContent";
 import { upstreamTopics } from "../hooks/mqttTopics";
 import RocketRender from "../components/RocketRender";
+import { vec3, quat } from "gl-matrix";
 
 const Dashboard = () => {
   const { systemState, updateSystemState } = useSystemState();
@@ -34,22 +35,28 @@ const Dashboard = () => {
   };
 
   const checkVehicleOrientation = (x, y, z, w) => {
-    // Convert quaternion to axis-angle representation
-    const angle = 2 * Math.acos(w);
-    const sinAngle = Math.sin(angle / 2);
+    const targetVec = [0, 0, 1]; // Up in North East Down coordinates
+    let quat_def = quat.fromValues(x, y, z, w);
+    const quat_norm = Math.sqrt(x * x + y * y + z * z + w * w);
+    quat_def = quat_def.map((component) => component / quat_norm);
+    const targetVectorObj = vec3.fromValues(
+      targetVec[0],
+      targetVec[1],
+      targetVec[2]
+    );
+    const targetVecInBody = vec3.create();
+    // Rotate target vector intSo body frame using quaternion
+    vec3.transformQuat(targetVecInBody, targetVec, quat_def);
 
-    // Axis of rotation
-    const axisX = x / sinAngle;
-    const axisY = y / sinAngle;
-    const axisZ = z / sinAngle;
+    // Define a vector to represent the nose direction of the rocket in body coordinates
+    const rocketVectorInBody = [1, 0, 0];
 
-    // Calculate angle between axis and vertical axis (0, 0, 1)
-    const dotProduct = axisX * 0 + axisY * 0 + axisZ * 1; // Vertical axis is (0, 0, 1)
+    const dotProduct = vec3.dot(targetVecInBody, rocketVectorInBody);
     const axisAngle = Math.acos(dotProduct);
 
     // Convert angle to degrees
     const degrees = (180 / Math.PI) * axisAngle;
-
+    console.log(degrees);
     // Check if the angle is within 30 degrees of vertical
     return degrees <= 30 || degrees >= 150; // 180 - 30 = 150 for the opposite direction
   };
@@ -153,7 +160,7 @@ const Dashboard = () => {
                   systemState.quaternion_q3,
                   systemState.quaternion_q4,
                   systemState.quaternion_q1
-                ) === 1
+                ) === true
                   ? "bg-green-500"
                   : "bg-red-500"
               }`}

@@ -8,7 +8,7 @@ void setup() {
   while (!LoRa.begin(915E6)) {
   }
   LoRa.setPreambleLength(8);
-//  LoRa.setSignalBandwidth(500000);
+  LoRa.setSignalBandwidth(500000);
 }
 
 

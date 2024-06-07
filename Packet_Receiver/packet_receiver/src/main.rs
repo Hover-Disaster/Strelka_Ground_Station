@@ -893,64 +893,87 @@ async fn main() {
 
     loop {
         let mut bytes_available = 0;
-        let mut locked_port = async_port.lock().unwrap();
-        if locked_port.bytes_to_read().unwrap() > 0 {
-            // Wait for all the bytes to slowly arrive over the USB
-            let delay_time_ms = Duration::from_millis(25);
-            sleep(delay_time_ms).await;
-
-            match locked_port.bytes_to_read() {
-                Ok(value) => {
-                    bytes_available = value;
+        match async_port.lock() {
+            Ok(mut locked_port) => {
+                let mut available_bytes = 0;
+                match locked_port.bytes_to_read() {
+                    Ok(bytes_to_read) => {
+                        available_bytes = bytes_to_read;
+                    }
+                    Err(err) => {
+                        available_bytes = 0;
+                        eprintln!("Error: {}", err);
+                    }
                 }
-                Err(err) => {
-                    eprintln!("Error: {:?}", err);
-                    // Handle the error in an appropriate way, e.g., log it, return an error value, etc.
+                if available_bytes > 0 {
+                    // Wait for all the bytes to slowly arrive over the USB
+                    let delay_time_ms = Duration::from_millis(25);
+                    sleep(delay_time_ms).await;
+
+                    match locked_port.bytes_to_read() {
+                        Ok(value) => {
+                            bytes_available = value;
+                        }
+                        Err(err) => {
+                            eprintln!("Error: {:?}", err);
+                            // Handle the error in an appropriate way, e.g., log it, return an error value, etc.
+                        }
+                    }
+                    println!("Read {} bytes from usb", bytes_available);
+                    let mut read_buffer: Vec<u8> = vec![0; bytes_available as usize];
+                    let bytes_read = locked_port.read_exact(&mut read_buffer).unwrap();
+                    // println!("Bytes read: {}", bytes_available);
+                    // Take mutex on asynchronous packet handler
+                    let mut locked_handler = main_packet_handler.lock().unwrap();
+                    match locked_handler.handle_upstream_packet(&read_buffer.to_vec()) {
+                        Ok((mqtt_topic, mqtt_payload)) => {
+                            let async_client = client.clone();
+                            task::spawn(async move {
+                                println!("Publishing to topic: {}", mqtt_topic);
+                                async_client
+                                    .publish(
+                                        mqtt_topic.clone(),
+                                        QoS::AtLeastOnce,
+                                        false,
+                                        mqtt_payload.clone(),
+                                    )
+                                    .await
+                                    .unwrap();
+                                time::sleep(Duration::from_millis(100)).await;
+                            });
+                        }
+                        Err(err) => {
+                            eprintln!("Error: {}", err);
+                            // TODO: handle the error case
+                        }
+                    }
+                } else {
+                    drop(locked_port);
                 }
             }
-            println!("Read {} bytes from usb", bytes_available);
-            let mut read_buffer: Vec<u8> = vec![0; bytes_available as usize];
-            let bytes_read = locked_port.read_exact(&mut read_buffer).unwrap();
-            // println!("Bytes read: {}", bytes_available);
-            // Take mutex on asynchronous packet handler
-            let mut locked_handler = main_packet_handler.lock().unwrap();
-            match locked_handler.handle_upstream_packet(&read_buffer.to_vec()) {
-                Ok((mqtt_topic, mqtt_payload)) => {
-                    let async_client = client.clone();
-                    task::spawn(async move {
-                        println!("Publishing to topic: {}", mqtt_topic);
-                        async_client
-                            .publish(
-                                mqtt_topic.clone(),
-                                QoS::AtLeastOnce,
-                                false,
-                                mqtt_payload.clone(),
-                            )
-                            .await
-                            .unwrap();
-                        time::sleep(Duration::from_millis(100)).await;
-                    });
-                }
-                Err(err) => {
-                    eprintln!("Error: {}", err);
-                    // TODO: handle the error case
-                }
+            Err(err) => {
+                eprintln!("Error: {}", err);
             }
-        } else {
-            drop(locked_port);
         }
-        let mut locked_handler = main_packet_handler.lock().unwrap();
-        // Check if current nodes have changed
 
-        /* TODO: This seams to be causing some issues with deadlock or something similar. When a packet is received at the same time as mqtt node subscribes */
-        if locked_handler.update_current_nodes {
-            locked_handler.update_current_nodes = false;
-            subscribe_topics(locked_handler.current_node_ids.clone(), &client).await;
-            println!(
-                "Subscribing to topcis: {:?}",
-                locked_handler.current_node_ids
-            );
+        match main_packet_handler.lock() {
+            Ok(mut locked_handler) => {
+                // Check if current nodes have changed
+
+                /* TODO: This seams to be causing some issues with deadlock or something similar. When a packet is received at the same time as mqtt node subscribes */
+                if locked_handler.update_current_nodes {
+                    locked_handler.update_current_nodes = false;
+                    subscribe_topics(locked_handler.current_node_ids.clone(), &client).await;
+                    println!(
+                        "Subscribing to topcis: {:?}",
+                        locked_handler.current_node_ids
+                    );
+                }
+                drop(locked_handler);
+            }
+            Err(err) => {
+                eprintln!("Error: {}", err);
+            }
         }
-        drop(locked_handler);
     }
 }
